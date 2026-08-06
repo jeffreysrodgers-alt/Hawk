@@ -1,0 +1,2174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Hawk v. 1.0</title>
+
+<!-- PWA / Add to Home Screen -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Hawk">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1f5c4a">
+<meta name="color-scheme" content="light only">
+
+<!-- App icon — inline SVG converted to data URI so no external files needed -->
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%231f5c4a'/%3E%3Ctext x='90' y='125' font-size='100' text-anchor='middle' font-family='Arial'>🦅%3C/text%3E%3C/svg%3E">
+
+<style>
+/* Safe area padding for iPhone notch/home indicator */
+body { padding-bottom: max(80px, calc(80px + env(safe-area-inset-bottom))); padding-top: env(safe-area-inset-top); }
+:root{
+  color-scheme: light;
+  --bg:#f5f3ee;--card:#fff;--border:#ddd8cc;--border-strong:#c7c1b0;
+  --text:#1f2420;--muted:#6b6b63;
+  --green:#2f6e4d;--green-bg:#e6f0e9;
+  --red:#a23b2f;--red-bg:#f5e8e5;
+  --accent:#1f5c4a;--accent-bg:#e3efe9;
+  --gold:#8a6a1f;--gold-bg:#f3ecdb;
+  --r:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);padding:18px 13px 80px;}
+.wrap{max-width:680px;margin:0 auto;}
+h1{font-size:20px;font-weight:700;margin-bottom:2px;}
+.sub{font-size:13px;color:var(--muted);margin-bottom:15px;}
+/* tabs */
+.tabs{display:flex;gap:5px;margin-bottom:14px;border-bottom:1px solid var(--border);padding-bottom:10px;flex-wrap:wrap;}
+.tab{flex:1;min-width:55px;padding:7px 4px;border:1px solid var(--border-strong);background:var(--card);border-radius:8px;font-size:11.5px;cursor:pointer;color:var(--text);text-align:center;}
+.tab.on{border-color:var(--accent);background:var(--accent-bg);color:var(--accent);font-weight:700;}
+.tab:disabled{opacity:.38;cursor:not-allowed;}
+.panel{display:none;}.panel.on{display:block;}
+/* cards */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:13px 14px;margin-bottom:10px;}
+.lbl{font-size:12px;color:var(--muted);display:block;margin-bottom:3px;}
+.muted{font-size:13px;color:var(--muted);margin-bottom:8px;}
+/* inputs */
+input[type=text],input[type=number],select{width:100%;padding:8px 9px;border:1px solid var(--border-strong);border-radius:8px;font-size:14px;background:#fff;color:var(--text);}
+.row{display:flex;gap:8px;align-items:flex-end;margin-bottom:8px;flex-wrap:wrap;}
+.row>div{flex:1;min-width:68px;}
+/* buttons */
+button{padding:7px 12px;border:1px solid var(--border-strong);border-radius:8px;background:#fff;font-size:13px;cursor:pointer;color:var(--text);}
+button:hover{background:#f0ede6;}
+button:active{transform:scale(.98);}
+.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent);width:100%;padding:10px;font-weight:600;font-size:14px;}
+.btn-primary:hover{background:#184a3c;}
+.btn-sm{font-size:12px;padding:4px 9px;}
+.chip{font-size:12.5px;padding:6px 11px;}
+.chip.on{border-color:var(--accent);background:var(--accent-bg);color:var(--accent);font-weight:600;}
+.chip-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;}
+/* player rows */
+.p-row{display:flex;gap:7px;margin-bottom:7px;align-items:flex-end;}
+.p-row input[type=text]{flex:2;}
+.p-row .hw{flex:1;}
+/* SI grid */
+.si-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(60px,1fr));gap:4px;margin-bottom:4px;}
+.si-cell label{font-size:9.5px;color:var(--muted);display:block;text-align:center;}
+.si-cell input{padding:5px 3px;text-align:center;font-size:12px;}
+/* nav */
+.nav-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:11px;}
+.h-label{font-size:15px;font-weight:700;text-align:center;min-width:80px;}
+.h-sub{font-size:11px;color:var(--muted);text-align:center;margin-top:1px;}
+/* score table */
+.sc-tbl{width:100%;border-collapse:collapse;font-size:13px;}
+.sc-tbl th{font-size:11px;color:var(--muted);font-weight:600;padding:3px;border-bottom:1px solid var(--border);text-align:left;}
+.sc-tbl td{padding:5px 3px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.sc-tbl input{text-align:center;font-size:14px;width:100%;padding:5px 3px;border:1px solid var(--border-strong);border-radius:6px;}
+/* badges */
+.b-up{background:var(--green-bg);color:var(--green);padding:2px 7px;border-radius:5px;font-size:12px;font-weight:600;white-space:nowrap;}
+.b-dn{background:var(--red-bg);color:var(--red);padding:2px 7px;border-radius:5px;font-size:12px;font-weight:600;white-space:nowrap;}
+.b-ev{background:#eee;color:var(--muted);padding:2px 7px;border-radius:5px;font-size:12px;font-weight:600;white-space:nowrap;}
+.sn{font-size:11px;color:var(--muted);margin-top:3px;}
+/* summary */
+.sum-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:14px;}
+.sum-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:12px;}
+.sum-name{font-size:13px;color:var(--muted);margin-bottom:4px;}
+.sum-total{font-size:22px;font-weight:700;}
+.pos{color:var(--green);}.neg{color:var(--red);}
+table.det{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:12px;}
+table.det td,table.det th{padding:5px 4px;border-bottom:1px solid var(--border);}
+table.det td:last-child,table.det th:last-child{text-align:right;}
+.sec{font-size:13px;color:var(--muted);font-weight:600;margin:12px 0 6px;}
+.sec:first-child{margin-top:0;}
+.hawk-btn-selected{background:var(--accent) !important;color:#fff !important;border-color:var(--accent) !important;font-weight:700;}
+.err{font-size:12px;color:var(--red);display:none;margin-bottom:6px;}
+/* skins */
+.skin-tbl{width:100%;border-collapse:collapse;font-size:12.5px;}
+.skin-tbl th,.skin-tbl td{padding:5px 4px;border-bottom:1px solid var(--border);}
+.skin-tbl th{font-size:11px;color:var(--muted);font-weight:600;}
+.skin-win td{background:var(--green-bg);}
+.skin-tie td{background:#f5f3ec;}
+.circled{display:inline-block;width:26px;height:26px;line-height:26px;border-radius:50%;border:2px solid var(--green);color:var(--green);font-weight:700;text-align:center;font-size:13px;}
+/* hawk section within scorecard */
+.hawk-section{border-top:2px solid var(--accent);margin-top:10px;padding-top:10px;}
+.hawk-title{font-size:13px;font-weight:700;color:var(--accent);margin-bottom:7px;}
+/* pts mini grid */
+.pts-mini{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:6px;margin-top:6px;}
+.pts-card{background:#faf9f5;border:1px solid var(--border);border-radius:8px;padding:8px;}
+.pts-nm{font-size:11px;color:var(--muted);}
+.pts-v{font-size:15px;font-weight:700;}
+.seg-card{background:#faf9f5;border:1px solid var(--border);border-radius:8px;padding:9px 11px;margin-bottom:8px;}
+@media print{
+  .tabs{display:none!important;}
+  .panel{display:none!important;}
+  #panel-summary{display:block!important;}
+  #export-print,#export-csv{display:none!important;}
+  body{padding:10px;}
+  .sum-card{break-inside:avoid;}
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#f5f3ee;--card:#fff;--border:#ddd8cc;--border-strong:#c7c1b0;
+    --text:#1f2420;--muted:#6b6b63;
+    --green:#2f6e4d;--green-bg:#e6f0e9;
+    --red:#a23b2f;--red-bg:#f5e8e5;
+    --accent:#1f5c4a;--accent-bg:#e3efe9;
+    --gold:#8a6a1f;--gold-bg:#f3ecdb;
+  }
+  html,body{background:#f5f3ee !important;color:#1f2420 !important;}
+  .card,.sum-card,.seg-card{background:#fff !important;color:#1f2420 !important;}
+  input,select{background:#fff !important;color:#1f2420 !important;}
+  button{background:#fff !important;color:#1f2420 !important;}
+  table,td,th{color:#1f2420 !important;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Hawk</h1>
+<p class="sub">Whidbey Golf Club — v. 1.0</p>
+
+<div class="tabs">
+  <button class="tab on"  data-tab="setup">Setup</button>
+  <button class="tab" data-tab="scorecard" disabled>Score Entry</button>
+  <button class="tab" data-tab="summary"   disabled>Summary</button>
+</div>
+
+<!-- SETUP -->
+<div class="panel on" id="panel-setup">
+  <div class="card">
+    <p class="muted">Players (4 or 5) — name &amp; course handicap</p>
+    <div id="p-inputs"></div>
+    <div style="display:flex;gap:7px;margin-bottom:12px;">
+      <button class="btn-sm" id="add-p">+ player</button>
+      <button class="btn-sm" id="rm-p">- player</button>
+    </div>
+    <p style="font-size:11.5px;color:var(--muted);" id="daily-note"></p>
+  </div>
+  <div class="card">
+    <p style="font-size:14px;font-weight:600;cursor:pointer;margin:0;display:flex;justify-content:space-between;align-items:center;" id="si-toggle">
+      <span>Whidbey Golf Club</span><span style="font-size:12px;font-weight:400;color:var(--muted);">Stroke index &amp; par ▸</span>
+    </p>
+    <div id="si-body" style="display:none;margin-top:10px;">
+      <div class="si-grid" id="si-front"></div>
+      <div class="si-grid" id="si-back"></div>
+    </div>
+  </div>
+  <div class="card">
+    <p style="font-size:14px;font-weight:600;cursor:pointer;margin:0;display:flex;justify-content:space-between;align-items:center;" id="nassau-setup-toggle">
+      <span>Nassau</span><span style="font-size:12px;font-weight:400;color:var(--muted);">Set up matches ▸</span>
+    </p>
+    <div id="nassau-setup-body" style="display:none;margin-top:10px;">
+      <p class="muted" style="margin-bottom:8px;">Toggle and set $ for each match. Enter player names first.</p>
+      <div id="nassau-setup-pairs"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="row">
+      <div><label class="lbl">Total holes</label>
+        <select id="hole-count"><option value="9">9</option><option value="18" selected>18</option></select>
+      </div>
+      <div><label class="lbl">$ per unit</label>
+        <input type="number" id="pos-val" value="0.50" min="0" step="0.25">
+      </div>
+    </div>
+    <button class="btn-primary" id="start-btn" style="margin-top:4px;">Start round</button>
+  </div>
+</div>
+
+<!-- ROTATIONS -->
+<div class="panel" id="panel-rotations">
+  <p class="muted">Rotations — <span id="rot-status"></span></p>
+  <div id="rot-list"></div>
+  <div class="card" id="new-rot-card">
+    <p class="muted">New rotation</p>
+    <div class="row">
+      <div><label class="lbl">Starting hole</label><input type="number" id="rot-from"></div>
+      <div><label class="lbl">Number of holes</label><input type="number" id="rot-num"></div>
+    </div>
+    <p class="muted" id="pair-note" style="margin-bottom:5px;"></p>
+    <div class="chip-row" id="pair-area"></div>
+    <p class="err" id="rot-err"></p>
+    <button class="btn-primary" id="rot-add">Add rotation</button>
+  </div>
+</div>
+
+<!-- SCORECARD -->
+<div class="panel" id="panel-scorecard">
+  <div style="text-align:center;margin-bottom:8px;">
+    <div class="h-label" id="sc-hole-lbl"></div>
+    <div class="h-sub" id="sc-hole-sub"></div>
+  </div>
+  <div id="sc-actions" style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;"></div>
+  <div class="card">
+    <table class="sc-tbl" id="sc-tbl"></table>
+  </div>
+  <div class="nav-row" style="margin-bottom:10px;">
+    <button class="btn-sm" id="sc-prev">← prev</button>
+    <button class="btn-sm" id="sc-next">next →</button>
+  </div>
+  <div id="sc-results"></div>
+</div>
+
+<!-- SCORECARD -->
+<div class="panel" id="panel-card">
+  <p class="muted">Hole-by-hole scores — tap a player to expand</p>
+  <div id="card-wrap"></div>
+</div>
+
+<!-- SKINS -->
+<div class="panel" id="panel-skins">
+  <p class="muted">Net skins — full course handicap</p>
+  <div id="skins-wrap"></div>
+</div>
+
+<!-- HAWK running totals -->
+<div class="panel" id="panel-hawk">
+  <p class="muted">Hawk is entered on the <strong>Scorecard</strong> tab each hole. Running totals:</p>
+  <div class="pts-mini" id="hawk-totals"></div>
+  <div style="margin-top:14px;" id="hawk-hole-log"></div>
+</div>
+
+<!-- NASSAU -->
+<div class="panel" id="panel-nassau">
+  <p class="muted">Nassau — match play between every pair</p>
+  <div id="nassau-wrap"></div>
+</div>
+
+<!-- SUMMARY -->
+<div class="panel" id="panel-summary">
+  <div style="display:flex;gap:8px;margin-bottom:12px;">
+    <button class="btn-sm" id="export-print" style="flex:1;background:var(--accent-bg);color:var(--accent);border-color:var(--accent);font-weight:600;">🖨 Print / Save PDF</button>
+    <button class="btn-sm" id="export-csv" style="flex:1;background:var(--gold-bg);color:var(--gold);border-color:var(--gold);font-weight:600;">⬇ Export CSV</button>
+  </div>
+  <div class="sum-grid" id="sum-cards"></div>
+  <div id="sum-detail"></div>
+</div>
+</div><!-- .wrap -->
+
+<script>
+(function(){
+// ─── COURSE DATA ──────────────────────────────────────────────────────────────
+const SI  = [5,15,7,13,3,1,17,9,11, 2,14,6,18,4,12,10,16,8];
+const PAR = [5,3,4,4,4,5,3,4,4,    4,4,5,3,4,4,4,3,5];
+// Hawk values depend on player count; pig doubles everything
+// 4-player: high/low $1, pos $0.50 | 5-player: high/low $0.50, pos $0.50
+// Hawk: 1 unit per point (high net, low net, positives), pig doubles
+const hawkMatchVal = (pig)=> pig?2:1;
+const hawkPosVal   = (pig)=> pig?2:1;
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let S = {
+  players:[{name:'',hcp:0},{name:'',hcp:0},{name:'',hcp:0},{name:'',hcp:0}],
+  si: SI.slice(), par: PAR.slice(),
+  holes:18, started:false,
+  matchVal:3,   // $ per match win — default for 4 players; updated on start
+  posVal:0.25,  // units per point
+  hawkStart:99,          // hole# hawk begins
+  hawkIdx:null,          // player index of hawk
+  rotations:[],          // {start,end,matchups:[{teamA,teamB}]}
+  scores:{},             // hole->{gross:[],pos:[],x:[]}
+  hawkData:{},           // hole->{partnerIdx or null (pig), result:'win'|'lose'|'push'}
+  curHole:1,
+};
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
+const ns  = ()=>S.players.map((p,i)=>(p.name||'').trim()||'Player '+(i+1));
+const np  = ()=>S.players.length;
+
+function dailyHcps(){
+  const h=S.players.map(p=>+(p.hcp)||0), low=Math.min(...h);
+  return h.map(v=>Math.max(0,Math.round((v-low)*10)/10));
+}
+function dailyStrokes(pi,hole){
+  const dh=dailyHcps()[pi], si=S.si[hole-1];
+  const f=Math.floor(dh/18); return f+(si<=(dh-f*18)?1:0);
+}
+function courseStrokes(pi,hole){
+  const hcp=Math.round(+(S.players[pi].hcp)||0), si=S.si[hole-1];
+  const f=Math.floor(hcp/18); return f+(si<=(hcp-f*18)?1:0);
+}
+function ensureScore(hole){
+  if(!S.scores[hole]){const c=np();S.scores[hole]={gross:Array(c).fill(''),pos:Array(c).fill(''),x:Array(c).fill(false)};}
+}
+function isX(hole,pi){ return !!(S.scores[hole]&&S.scores[hole].x&&S.scores[hole].x[pi]); }
+function getGross(hole,pi){
+  if(isX(hole,pi)) return 'X';
+  const g=S.scores[hole]&&S.scores[hole].gross[pi];
+  return (g===''||g===null||g===undefined)?null:+g;
+}
+// Daily-adjusted net. X beats nothing (loses to any numeric)
+// Returns {val, isX} — isX means can only lose
+function dailyNet(pi,hole){
+  const g=getGross(hole,pi); if(g===null) return null;
+  const strokes=dailyStrokes(pi,hole);
+  const netVal = (g==='X') ? S.par[hole-1]+2 : g-strokes;
+  return {val:netVal, x:g==='X'};
+}
+// Course net for skins
+function skinNet(pi,hole){
+  const g=getGross(hole,pi); if(g===null) return null;
+  const strokes=courseStrokes(pi,hole);
+  return (g==='X') ? S.par[hole-1]+2 : g-strokes;
+}
+
+// Compare two nets considering X rule
+// returns 1 if a wins, -1 if b wins, 0 if tie
+function compareNets(na,nb){
+  if(na===null||nb===null) return 0;
+  // X always loses to numeric
+  if(na.x && !nb.x) return -1;
+  if(!na.x && nb.x) return 1;
+  if(na.x && nb.x) return 0; // both X = tie
+  if(na.val<nb.val) return 1;
+  if(nb.val<na.val) return -1;
+  return 0;
+}
+
+function segForHole(hole){ return S.rotations.find(r=>hole>=r.start&&hole<=r.end)||null; }
+
+// ─── MATCH SCORING ────────────────────────────────────────────────────────────
+function holeResult(m, hole){
+  const [a1,a2]=m.teamA,[b1,b2]=m.teamB;
+  const na1=dailyNet(a1,hole),na2=dailyNet(a2,hole);
+  const nb1=dailyNet(b1,hole),nb2=dailyNet(b2,hole);
+  if(!na1||!na2||!nb1||!nb2) return null;
+  // Low and high for each team (X loses regardless)
+  // For team low: prefer numeric; sort so X goes last
+  function teamLowHigh(n1,n2){
+    // low = winner of comparison, high = other
+    const cmp=compareNets(n1,n2);
+    if(cmp>=0) return {low:n1,high:n2};
+    return {low:n2,high:n1};
+  }
+  const ta=teamLowHigh(na1,na2), tb=teamLowHigh(nb1,nb2);
+  let aPts=0,bPts=0;
+  const lc=compareNets(ta.low,tb.low);
+  if(lc>0) aPts++; else if(lc<0) bPts++;
+  const hc=compareNets(ta.high,tb.high);
+  if(hc>0) aPts++; else if(hc<0) bPts++;
+  const sc=S.scores[hole];
+  const posA=sc?(+(sc.pos[a1])||0)+(+(sc.pos[a2])||0):0;
+  const posB=sc?(+(sc.pos[b1])||0)+(+(sc.pos[b2])||0):0;
+  return {aPts,bPts,posA,posB};
+}
+
+function rotRunning(m,rotStart,rotEnd,upTo){
+  let aT=0,bT=0,posA=0,posB=0,played=0;
+  for(let h=rotStart;h<=Math.min(rotEnd,upTo);h++){
+    const r=holeResult(m,h); if(!r) continue;
+    aT+=r.aPts;bT+=r.bPts;posA+=r.posA;posB+=r.posB;played++;
+  }
+  return {aTotal:aT,bTotal:bT,posA,posB,played};
+}
+
+function statusLabel(aT,bT,rotStart,rotEnd,upTo,lastPlayed){
+  const diff=aT-bT, lead=Math.abs(diff);
+  // Use lastPlayed (furthest hole with scores) for remaining calc, not the viewed hole
+  const effectiveUpTo=lastPlayed!==undefined?lastPlayed:upTo;
+  const rem=rotEnd-effectiveUpTo, pts=rem*2;
+  const tail=rem>0?' with '+rem+' hole'+(rem!==1?'s':'')+' to play':' (final)';
+  if(diff>0&&lead>pts) return {text:'Team A wins '+lead+'&'+pts,cls:'b-up',over:true};
+  if(diff<0&&lead>pts) return {text:'Team B wins '+lead+'&'+pts,cls:'b-dn',over:true};
+  if(diff===0) return {text:'All square'+tail,cls:'b-ev',over:false};
+  if(diff>0)   return {text:'Team A '+diff+' up'+tail,cls:'b-up',over:false};
+  return {text:'Team B '+lead+' up'+tail,cls:'b-dn',over:false};
+}
+
+function lastScoredHole(rot){
+  // If rotation is locked (ended), always use stored end — going back can't shrink it
+  if(rot.locked) return rot.end;
+  // Find the highest hole in this rotation that has complete scores for all players
+  let last=rot.start-1;
+  for(let h=rot.start;h<=rot.end;h++){
+    const sc=S.scores[h];
+    if(!sc) break;
+    const allIn=ns().every((_,i)=>{
+      if(isX(h,i)) return true;
+      const g=sc.gross[i];
+      return g!==''&&g!==null&&g!==undefined;
+    });
+    if(allIn) last=h; else break;
+  }
+  return last;
+}
+
+function allOver(rot,upTo){
+  const last=lastScoredHole(rot);
+  return rot.matchups.every(m=>{
+    const r=rotRunning(m,rot.start,rot.end,last);
+    return statusLabel(r.aTotal,r.bTotal,rot.start,rot.end,last,last).over;
+  });
+}
+
+// ─── MONEY ────────────────────────────────────────────────────────────────────
+function rotationMoney(){
+  const net=Array(np()).fill(0), mv=S.matchVal;
+  S.rotations.forEach(rot=>{
+    rot.matchups.forEach(m=>{
+      const r=rotRunning(m,rot.start,rot.end,rot.end);
+      const diff=r.aTotal-r.bTotal;
+      if(diff>0){m.teamA.forEach(i=>net[i]+=mv);m.teamB.forEach(i=>net[i]-=mv);}
+      else if(diff<0){m.teamB.forEach(i=>net[i]+=mv);m.teamA.forEach(i=>net[i]-=mv);}
+      const pd=r.posA-r.posB;
+      if(pd!==0){
+        const win=pd>0?m.teamA:m.teamB, lose=pd>0?m.teamB:m.teamA, amt=Math.abs(pd)*S.posVal;
+        win.forEach(i=>net[i]+=amt); lose.forEach(i=>net[i]-=amt);
+      }
+    });
+  });
+  return net;
+}
+
+// Only count rotations that are fully complete (last scored hole = rot.end)
+// Used for the top-level summary cards — in-progress rotations don't show until done
+function settledMoney(){
+  const net=Array(np()).fill(0), mv=S.matchVal;
+  S.rotations.forEach(rot=>{
+    const last=lastScoredHole(rot);
+    if(last<rot.end) return; // rotation not fully played yet — skip
+    rot.matchups.forEach(m=>{
+      const r=rotRunning(m,rot.start,rot.end,rot.end);
+      const diff=r.aTotal-r.bTotal;
+      if(diff>0){m.teamA.forEach(i=>net[i]+=mv);m.teamB.forEach(i=>net[i]-=mv);}
+      else if(diff<0){m.teamB.forEach(i=>net[i]+=mv);m.teamA.forEach(i=>net[i]-=mv);}
+      const pd=r.posA-r.posB;
+      if(pd!==0){
+        const win=pd>0?m.teamA:m.teamB, lose=pd>0?m.teamB:m.teamA, amt=Math.abs(pd)*S.posVal;
+        win.forEach(i=>net[i]+=amt); lose.forEach(i=>net[i]-=amt);
+      }
+    });
+  });
+  // Hawk holes are per-hole so always settled when entered
+  totalHawkMoney().forEach((v,i)=>net[i]+=v);
+  return net;
+}
+
+function totalMoneyBeforeHole(hole){
+  // rotation money up to (but not including) hawk holes + hawk holes before this one
+  const rm=rotationMoney();
+  const net=rm.slice();
+  Object.keys(S.hawkData).map(Number).filter(h=>h<hole).forEach(h=>{
+    const hm=hawkHoleMoney(h); hm.forEach((v,i)=>net[i]+=v);
+  });
+  return net;
+}
+
+function hawkForHole(hole){
+  // Stored per-hole override (for tie-breaks)
+  const hd=S.hawkData[hole];
+  if(hd&&hd.hawkIdx!==undefined) return hd.hawkIdx;
+
+  const n=np();
+  const rotationHoles=n*n; // 4-player: 16, 5-player: 25 (but capped at S.holes)
+  const inRotation=hole<=Math.min(rotationHoles, S.holes-(S.holes%(n)||n));
+  // More precisely: rotation covers holes 1 through (n * floor(S.holes/n))
+  const rotEnd=Math.floor(S.holes/n)*n;
+
+  if(hole<=rotEnd){
+    // Predetermined rotation: player index = (hole-1) % n
+    return (hole-1) % n;
+  }
+
+  // After rotation ends: money-based hawk (biggest loser)
+  const money=totalMoneyBeforeHole(hole);
+  const minVal=Math.min(...money);
+  const candidates=money.map((_,i)=>i).filter(i=>money[i]===minVal);
+  if(candidates.length===1) return candidates[0];
+  // Tie: carry previous hawk forward if still tied
+  if(hole>1){
+    const prevHawk=hawkForHole(hole-1);
+    if(candidates.includes(prevHawk)) return prevHawk;
+  }
+  return candidates[0];
+}
+
+// Hawk money per hole, returns array of net $
+// hw parameter allows passing in the hawk for this hole
+function hawkHoleMoney(hole){
+  const hd=S.hawkData[hole]; if(!hd) return Array(np()).fill(0);
+  const hw=hawkForHole(hole);
+  if(hw===null||hw===undefined) return Array(np()).fill(0);
+  const net=Array(np()).fill(0);
+  const allIdx=ns().map((_,i)=>i);
+  const others=allIdx.filter(i=>i!==hw);
+  const sc=S.scores[hole];
+  const pos=allIdx.map(i=>sc?(+(sc.pos[i])||0):0);
+
+  if(hd.mode==='pig'){
+    // One tie all tie. One loss all lose. Must beat everyone to win.
+    const pigNet=dailyNet(hw,hole);
+    let result='push'; // default if scores incomplete
+    if(pigNet){
+      let anyLoss=false, anyTie=false, allScored=true;
+      for(const opp of others){
+        const oppNet=dailyNet(opp,hole);
+        if(!oppNet){allScored=false;continue;}
+        const c=compareNets(pigNet,oppNet);
+        if(c<0) anyLoss=true;   // opp beat pig
+        if(c===0) anyTie=true;  // tie
+      }
+      if(anyLoss) result='lose';
+      else if(anyTie) result='push'; // one tie all tie
+      else if(allScored) result='win'; // pig beat everyone
+      // else incomplete — stay push
+    }
+
+    others.forEach(opp=>{
+      // Pig: match value and pos value both doubled vs normal hawk
+      const mv=hawkMatchVal(true), pv=hawkPosVal(true);
+      const mVal = result==='win'?2*mv: result==='lose'?-2*mv:0;
+      net[hw]+=mVal; net[opp]-=mVal;
+      // positives still count regardless of match result
+      const pd=(pos[hw]-pos[opp])*pv;
+      net[hw]+=pd; net[opp]-=pd;
+    });
+  } else if(hd.mode==='partner'&&hd.partnerIdx!==null&&hd.partnerIdx!==undefined){
+    const team=[hw,hd.partnerIdx];
+    const rest=others.filter(i=>i!==hd.partnerIdx);
+    const mv=hawkMatchVal(false), pv=hawkPosVal(false);
+
+    // Build opponent matchups: 4-player = one matchup vs the other 2
+    //                           5-player = three matchups vs each 2-man combo of the remaining 3
+    const oppMatchups = np()===5
+      ? [[rest[0],rest[1]],[rest[0],rest[2]],[rest[1],rest[2]]]
+      : [rest];
+
+    function tLowHigh(n0,n1){
+      if(!n1) return {low:n0,high:n0};
+      return compareNets(n0,n1)>=0?{low:n0,high:n1}:{low:n1,high:n0};
+    }
+    const tn0=dailyNet(team[0],hole), tn1=dailyNet(team[1],hole);
+    const ta=tn0&&tn1?tLowHigh(tn0,tn1):null;
+
+    oppMatchups.forEach(oppPair=>{
+      const on0=dailyNet(oppPair[0],hole), on1=oppPair[1]!==undefined?dailyNet(oppPair[1],hole):null;
+      const tb=on0?tLowHigh(on0,on1||on0):null;
+      let aPts=0,bPts=0;
+      if(ta&&tb){
+        const lc=compareNets(ta.low,tb.low); if(lc>0) aPts++; else if(lc<0) bPts++;
+        const hc=compareNets(ta.high,tb.high); if(hc>0) aPts++; else if(hc<0) bPts++;
+      }
+      const mDiff=(aPts-bPts)*mv;
+      team.forEach(i=>net[i]+=mDiff); oppPair.forEach(i=>net[i]-=mDiff);
+      // positives per matchup
+      const posTeam=pos[team[0]]+pos[team[1]];
+      const posOpp=oppPair.reduce((s,i)=>s+pos[i],0);
+      const posDiff=posTeam-posOpp;
+      const posAmt=Math.abs(posDiff)*pv;
+      if(posDiff!==0){
+        const win=posDiff>0?team:oppPair, lose=posDiff>0?oppPair:team;
+        win.forEach(i=>net[i]+=posAmt); lose.forEach(i=>net[i]-=posAmt);
+      }
+    });
+  }
+  // Apply double if called for this hole
+  if(hd.doubled) net.forEach((_,i)=>net[i]*=2);
+  return net;
+}
+
+function totalHawkMoney(){
+  const net=Array(np()).fill(0);
+  Object.keys(S.hawkData).forEach(h=>{
+    const hm=hawkHoleMoney(+h); hm.forEach((v,i)=>net[i]+=v);
+  });
+  return net;
+}
+
+function totalMoney(){
+  // Hawk: no rotation money, only hawk money
+  return totalHawkMoney();
+}
+
+// ─── TAB ──────────────────────────────────────────────────────────────────────
+function go(tab){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  document.getElementById('panel-'+tab).classList.add('on');
+  document.querySelector('[data-tab="'+tab+'"]').classList.add('on');
+  if(tab==='scorecard') renderScorecard();
+  if(tab==='card')      renderCard();
+  if(tab==='skins')     renderSkins();
+  if(tab==='summary')   renderSummary();
+}
+document.querySelectorAll('.tab').forEach(t=>{ t.onclick=()=>{ if(!t.disabled) go(t.dataset.tab); }; });
+
+// ─── SETUP ────────────────────────────────────────────────────────────────────
+const STANDARD_NAMES = ['Dave Phay','Dave Smith','Denny','Germ','Gordon','Jeff','Matzen','Mike','Pat','Roger','Steve','Stone','TJ','Tom','Tracy'];
+
+function renderPInputs(){
+  const c=document.getElementById('p-inputs'); c.innerHTML='';
+  S.players.forEach((p,i)=>{
+    const row=document.createElement('div'); row.className='p-row';
+
+    // Player number label
+    const numLabel=document.createElement('div');
+    numLabel.style.cssText='flex-shrink:0;width:20px;font-size:13px;font-weight:700;color:var(--muted);padding-top:10px;';
+    numLabel.textContent=(i+1)+'.';
+    row.appendChild(numLabel);
+
+    // Name: plain text input
+    const nameWrap=document.createElement('div'); nameWrap.style='flex:2;';
+    const ni=document.createElement('input'); ni.type='text'; ni.placeholder='Player name';
+    ni.style='width:100%;'; ni.value=p.name||'';
+    ni.oninput=e=>{S.players[i].name=e.target.value; renderDailyNote(); if(document.getElementById('nassau-setup-body').style.display!=='none') renderNassauSetup();};
+    nameWrap.appendChild(ni);
+
+    const hw=document.createElement('div'); hw.className='hw';
+    const hl=document.createElement('label'); hl.className='lbl'; hl.textContent='Course HCP';
+    const hi=document.createElement('input'); hi.type='number'; hi.step='0.1'; hi.value=p.hcp;
+    hi.oninput=e=>{S.players[i].hcp=+e.target.value||0; renderDailyNote();};
+    hw.appendChild(hl); hw.appendChild(hi);
+    row.appendChild(nameWrap); row.appendChild(hw); c.appendChild(row);
+  });
+  renderDailyNote();
+}
+function renderDailyNote(){
+  const dh=dailyHcps();
+  document.getElementById('daily-note').textContent='Daily strokes: '+ns().map((n,i)=>n+' '+Math.round(dh[i])).join(' · ');
+  // Update match value default based on player count (only if user hasn't manually changed it)
+  const mv=document.getElementById('match-val');
+  if(mv) mv.value=np()===5?2:3;
+}
+document.getElementById('add-p').onclick=()=>{if(np()<5){S.players.push({name:'',hcp:0});renderPInputs();}};
+document.getElementById('rm-p').onclick=()=>{if(np()>4){S.players.pop();renderPInputs();}};
+renderPInputs();
+
+function renderSiGrid(){
+  ['front','back'].forEach(side=>{
+    const el=document.getElementById('si-'+side); el.innerHTML='';
+    const [a,b]=side==='front'?[1,9]:[10,18];
+    for(let h=a;h<=b;h++){
+      const cell=document.createElement('div'); cell.className='si-cell';
+      const lab=document.createElement('label'); lab.textContent='H'+h+' p'+S.par[h-1];
+      const inp=document.createElement('input'); inp.type='number'; inp.min='1'; inp.max='18'; inp.value=S.si[h-1];
+      inp.oninput=e=>{S.si[h-1]=+e.target.value||h;};
+      cell.appendChild(lab); cell.appendChild(inp); el.appendChild(cell);
+    }
+  });
+}
+renderSiGrid();
+document.getElementById('si-toggle').onclick=()=>{
+  const body=document.getElementById('si-body');
+  const lbl=document.querySelector('#si-toggle span:last-child');
+  const open=body.style.display!=='none';
+  body.style.display=open?'none':'block';
+  lbl.textContent='Stroke index & par '+(open?'▸':'▴');
+};
+
+document.getElementById('nassau-setup-toggle').onclick=()=>{
+  const body=document.getElementById('nassau-setup-body');
+  const lbl=document.querySelector('#nassau-setup-toggle span:last-child');
+  const open=body.style.display!=='none';
+  body.style.display=open?'none':'block';
+  lbl.textContent='Set up matches '+(open?'▸':'▴');
+  if(!open) renderNassauSetup();
+};
+
+function renderNassauSetup(){
+  if(!S.nassau) S.nassau={};
+  const nms=ns(), wrap=document.getElementById('nassau-setup-pairs');
+
+  // Remember which player sections are currently open before rebuilding
+  const openSections={};
+  nms.forEach((_,pi)=>{
+    const body=document.getElementById('nassau-player-'+pi);
+    if(body) openSections[pi]=body.style.display!=='none';
+  });
+
+  wrap.innerHTML='';
+  const pairs=[];
+  for(let a=0;a<np();a++) for(let b=a+1;b<np();b++) pairs.push([a,b]);
+  pairs.forEach(([a,b])=>{ const key=a+'-'+b; if(!S.nassau[key]) S.nassau[key]={active:false,val:5}; });
+
+  if(!pairs.length){
+    wrap.innerHTML='<p style="font-size:13px;color:var(--muted);">Enter player names above first.</p>';
+    return;
+  }
+
+  nms.forEach((nm,pi)=>{
+    const bodyId='nassau-player-'+pi;
+    // Default open if first render (no saved state), otherwise restore
+    const isOpen=pi in openSections ? openSections[pi] : false;
+    const playerCard=document.createElement('div');
+    playerCard.style.cssText='border:1px solid var(--border);border-radius:8px;margin-bottom:7px;overflow:hidden;';
+
+    const hdr=document.createElement('div');
+    hdr.style.cssText='padding:9px 12px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;background:var(--bg);';
+    const activeCount=pairs.filter(([a,b])=>(a===pi||b===pi)&&S.nassau[a+'-'+b].active).length;
+    const arrow=isOpen?'▴':'▸';
+    hdr.innerHTML='<span style="font-size:13px;font-weight:700;">'+nm+'</span>'
+      +'<span style="font-size:11px;color:var(--muted);">'+(activeCount?activeCount+' match'+(activeCount>1?'es':''):'')+' '+arrow+'</span>';
+    hdr.onclick=()=>{
+      const body=document.getElementById(bodyId);
+      const open=body.style.display!=='none';
+      body.style.display=open?'none':'block';
+      const ac=pairs.filter(([a,b])=>(a===pi||b===pi)&&S.nassau[a+'-'+b].active).length;
+      hdr.querySelector('span:last-child').textContent=(ac?ac+' match'+(ac>1?'es':''):'')+' '+(open?'▸':'▴');
+    };
+    playerCard.appendChild(hdr);
+
+    const body=document.createElement('div');
+    body.id=bodyId;
+    body.style.display=isOpen?'block':'none';
+    body.style.cssText+='padding:8px 12px;border-top:1px solid var(--border);';
+
+    pairs.filter(([a,b])=>a===pi||b===pi).forEach(([a,b])=>{
+      const key=a+'-'+b, cfg=S.nassau[key];
+      const opponent=a===pi?nms[b]:nms[a];
+      const row=document.createElement('div');
+      row.style.cssText='display:flex;align-items:center;gap:8px;margin-bottom:7px;';
+
+      const tog=document.createElement('button');
+      tog.textContent=cfg.active?'ON':'OFF';
+      tog.className=cfg.active?'hawk-btn-selected btn-sm':'btn-sm';
+      tog.onclick=()=>{ cfg.active=!cfg.active; autosave(); renderNassauSetup(); };
+
+      const oppName=document.createElement('span');
+      oppName.style.cssText='flex:1;font-size:13px;';
+      oppName.textContent='vs '+opponent;
+
+      const amtWrap=document.createElement('div');
+      amtWrap.style.cssText='display:flex;align-items:center;gap:3px;';
+      const amtLbl=document.createElement('span');
+      amtLbl.style.cssText='font-size:12px;color:var(--muted);';
+      amtLbl.textContent='$';
+      const amtInp=document.createElement('input');
+      amtInp.type='number'; amtInp.min='1'; amtInp.step='1';
+      amtInp.value=cfg.val||5;
+      amtInp.style.cssText='width:50px;padding:4px 5px;font-size:13px;';
+      amtInp.oninput=e=>{ cfg.val=+e.target.value||5; autosave(); };
+      amtWrap.appendChild(amtLbl); amtWrap.appendChild(amtInp);
+
+      row.appendChild(tog); row.appendChild(oppName); row.appendChild(amtWrap);
+      body.appendChild(row);
+    });
+
+    playerCard.appendChild(body);
+    wrap.appendChild(playerCard);
+  });
+}
+
+document.getElementById('start-btn').onclick=()=>{
+  S.holes=+document.getElementById('hole-count').value;
+  S.matchVal=0;
+  S.posVal=+document.getElementById('pos-val').value||0.50;
+  S.nassauVal=5; // default, overridden per-pair in Nassau tab
+  S.started=true; S.hawkStart=1; S.hawkIdx=null;
+  S.rotations=[]; S.scores={}; S.hawkData={}; S.curHole=1;
+  autosave();
+  ['scorecard','summary'].forEach(t=>document.querySelector('[data-tab="'+t+'"]').disabled=false);
+  go('scorecard'); renderScorecard();
+};
+
+// ─── ROTATIONS ────────────────────────────────────────────────────────────────
+let segP={teamA:[]};
+
+function nextRotStart(){
+  if(!S.rotations.length) return 1;
+  return Math.max(...S.rotations.map(r=>r.end))+1;
+}
+function defRotHoles(idx){
+  if(np()===5) return 5;
+  return idx<2?6:5;
+}
+function pairCounts(){
+  const c=Array(np()).fill(0);
+  S.rotations.forEach(r=>{if(r.matchups.length) r.matchups[0].teamA.forEach(i=>c[i]++);});
+  return c;
+}
+
+function renderRotations(){
+  const hawk=S.hawkStart<=S.holes;
+  document.getElementById('rot-status').textContent=hawk
+    ?'Hawk from hole '+S.hawkStart:'Hawk not started';
+  document.getElementById('new-rot-card').style.display=hawk?'none':'block';
+  const start=nextRotStart();
+  const numHoles=defRotHoles(S.rotations.length);
+  const fs=document.getElementById('rot-from'),fn=document.getElementById('rot-num');
+  if(!fs.value) fs.value=start;
+  if(!fn.value) fn.value=numHoles;
+  renderRotList(); renderPairArea();
+}
+
+// Returns a Set of "i-j" strings (i<j) for all pairs that have been chosen partners in any rotation
+function usedPairs(){
+  const pairs=new Set();
+  S.rotations.forEach(rot=>{
+    rot.matchups.forEach(m=>{
+      // In 5-player, only teamA is the chosen fixed pair; teamB combos are auto-generated
+      // In 4-player, both teamA and teamB are chosen partnerships
+      const teamsToRecord = np()===5 ? [m.teamA] : [m.teamA, m.teamB];
+      teamsToRecord.forEach(team=>{
+        if(team.length===2){
+          const [a,b]=[Math.min(team[0],team[1]),Math.max(team[0],team[1])];
+          pairs.add(a+'-'+b);
+        }
+      });
+    });
+  });
+  return pairs;
+}
+
+function pairKey(a,b){ return Math.min(a,b)+'-'+Math.max(a,b); }
+
+function renderPairArea(){
+  const nms=ns(), area=document.getElementById('pair-area');
+  area.innerHTML=''; segP={teamA:[]};
+  if(np()===5){
+    const counts=pairCounts(), rotLeft=3-S.rotations.length;
+    const used=usedPairs();
+    document.getElementById('pair-note').textContent='Fixed pair plays all 3 combos of others. Count ('+rotLeft+' left). Previously paired shown with ⚠';
+    nms.forEach((nm,i)=>{
+      const b=document.createElement('button'); b.className='chip'; b.dataset.idx=i;
+      b.disabled=counts[i]>=2; if(b.disabled) b.style.opacity='0.38';
+      b.innerHTML=nm+' <sup>'+counts[i]+'</sup>';
+      b.onclick=()=>{
+        if(b.disabled) return;
+        segP.teamA.includes(i)?segP.teamA=segP.teamA.filter(x=>x!==i):segP.teamA.length<2&&segP.teamA.push(i);
+        const picked=segP.teamA;
+        area.querySelectorAll('button').forEach(bb=>{
+          const ii=+bb.dataset.idx;
+          bb.classList.toggle('on',picked.includes(ii));
+          if(picked.length===1&&!picked.includes(ii)&&!bb.disabled){
+            const wouldRepeat=used.has(pairKey(ii,picked[0]));
+            bb.innerHTML=nms[ii]+' <sup>'+counts[ii]+'</sup>'+(wouldRepeat?' ⚠':'');
+            bb.style.borderColor=wouldRepeat?'var(--gold)':'';
+            bb.style.color=wouldRepeat?'var(--gold)':'';
+          } else {
+            bb.innerHTML=nms[ii]+' <sup>'+counts[ii]+'</sup>';
+            if(!bb.disabled){bb.style.borderColor='';bb.style.color='';}
+          }
+        });
+      };
+      area.appendChild(b);
+    });
+  } else {
+    // 4-player: track used pairs and warn
+    const used=usedPairs();
+    document.getElementById('pair-note').textContent='Pick team A (2 players). Previously paired shown with ⚠';
+    nms.forEach((nm,i)=>{
+      const b=document.createElement('button'); b.className='chip'; b.dataset.idx=i; b.textContent=nm;
+      b.onclick=()=>{
+        if(segP.teamA.includes(i)){
+          segP.teamA=segP.teamA.filter(x=>x!==i);
+        } else if(segP.teamA.length<2){
+          segP.teamA.push(i);
+        }
+        // Update button states and warning labels
+        const picked=segP.teamA;
+        area.querySelectorAll('button').forEach(bb=>{
+          const ii=+bb.dataset.idx;
+          bb.classList.toggle('on',picked.includes(ii));
+          // Show ⚠ if picking this player would repeat a pair with the other already-selected player
+          if(picked.length===1&&!picked.includes(ii)){
+            const partner=picked[0];
+            const wouldRepeat=used.has(pairKey(ii,partner));
+            bb.textContent=nms[ii]+(wouldRepeat?' ⚠':'');
+            bb.style.borderColor=wouldRepeat?'var(--gold)':'';
+            bb.style.color=wouldRepeat?'var(--gold)':'';
+          } else {
+            bb.textContent=nms[ii];
+            bb.style.borderColor=''; bb.style.color='';
+          }
+        });
+      };
+      area.appendChild(b);
+    });
+  }
+}
+
+function rotErr(msg){const e=document.getElementById('rot-err');e.textContent=msg;e.style.display=msg?'block':'none';}
+
+document.getElementById('rot-add').onclick=()=>{
+  const nms=ns();
+  const start=+document.getElementById('rot-from').value;
+  const numHoles=+document.getElementById('rot-num').value;
+  if(!start||!numHoles||isNaN(start)||isNaN(numHoles)||numHoles<1){rotErr('Enter a valid starting hole and number of holes.');return;}
+  const end=start+numHoles-1;
+  if(S.hawkStart<=S.holes&&end>=S.hawkStart){rotErr('Must end before Hawk hole '+S.hawkStart+'.');return;}
+  if(segP.teamA.length!==2){rotErr('Pick exactly 2 players for the pairing.');return;}
+  // 4-player: check for repeated partnerships on both teams
+  if(np()===4){
+    const used=usedPairs();
+    const allIdx=ns().map((_,i)=>i), rest=allIdx.filter(i=>!segP.teamA.includes(i));
+    const teamA=segP.teamA, teamB=rest;
+    if(used.has(pairKey(teamA[0],teamA[1]))){
+      rotErr(ns()[teamA[0]]+' & '+ns()[teamA[1]]+' have already been partners this round.');return;
+    }
+    if(used.has(pairKey(teamB[0],teamB[1]))){
+      rotErr(ns()[teamB[0]]+' & '+ns()[teamB[1]]+' have already been partners this round.');return;
+    }
+  }
+  if(np()===5){
+    const counts=pairCounts(),rotLeft=3-S.rotations.length;
+    for(let i=0;i<np();i++){if(segP.teamA.includes(i)&&counts[i]>=2){rotErr(nms[i]+' already on pair 2×.');return;}}
+    if(rotLeft===1){
+      const must=nms.map((_,i)=>i).filter(i=>counts[i]===0);
+      for(const i of must){if(!segP.teamA.includes(i)){rotErr(nms[i]+' must be on pair this rotation.');return;}}
+    }
+    // Check fixed pair hasn't already been together
+    const used=usedPairs();
+    const [a,b]=segP.teamA;
+    if(used.has(pairKey(a,b))){
+      rotErr(nms[a]+' & '+nms[b]+' have already been partners this round.');return;
+    }
+  }
+  rotErr('');
+  const allIdx=nms.map((_,i)=>i), rest=allIdx.filter(i=>!segP.teamA.includes(i));
+  const matchups=np()===5
+    ?[[rest[0],rest[1]],[rest[0],rest[2]],[rest[1],rest[2]]].map(c=>({teamA:segP.teamA.slice(),teamB:c}))
+    :[{teamA:segP.teamA.slice(),teamB:rest}];
+  // Lock any previously unlocked rotations before adding the new one
+  S.rotations.forEach(rot=>{ if(!rot.locked) rot.locked=true; });
+  S.rotations.push({start,end,matchups});
+  autosave();
+  document.getElementById('rot-from').value=''; document.getElementById('rot-num').value='';
+  renderRotations();
+};
+
+function renderRotList(){
+  const nms=ns(), c=document.getElementById('rot-list'); c.innerHTML='';
+  if(!S.rotations.length){c.innerHTML='<p style="font-size:13px;color:var(--muted)">No rotations yet.</p>';return;}
+  S.rotations.forEach((rot,ri)=>{
+    const card=document.createElement('div'); card.className='seg-card';
+    const t=document.createElement('p'); t.style.cssText='font-size:14px;font-weight:600;margin-bottom:5px;';
+    t.textContent='Rotation '+(ri+1)+': Holes '+rot.start+'–'+rot.end;
+    card.appendChild(t);
+    rot.matchups.forEach(m=>{
+      const r=rotRunning(m,rot.start,rot.end,rot.end);
+      const st=statusLabel(r.aTotal,r.bTotal,rot.start,rot.end,rot.end);
+      const p=document.createElement('p'); p.style.cssText='font-size:13px;color:var(--muted);margin-bottom:3px;';
+      p.innerHTML=m.teamA.map(i=>nms[i]).join('&')+' vs '+m.teamB.map(i=>nms[i]).join('&')+' — <span class="'+st.cls+'">'+st.text+'</span>';
+      card.appendChild(p);
+    });
+
+    // Edit / remove / unlock buttons
+    const btnRow=document.createElement('div'); btnRow.style.cssText='display:flex;gap:7px;margin-top:6px;flex-wrap:wrap;';
+    const editBtn=document.createElement('button'); editBtn.className='btn-sm'; editBtn.textContent='edit';
+    const del=document.createElement('button'); del.className='btn-sm'; del.textContent='remove';
+    del.onclick=()=>{S.rotations.splice(ri,1);renderRotations();};
+    btnRow.appendChild(editBtn); btnRow.appendChild(del);
+    if(rot.locked){
+      const unlockBtn=document.createElement('button'); unlockBtn.className='btn-sm';
+      unlockBtn.textContent='🔓 unlock';
+      unlockBtn.style.cssText='color:var(--gold);border-color:var(--gold);';
+      unlockBtn.onclick=()=>{ rot.locked=false; autosave(); renderRotations(); };
+      btnRow.appendChild(unlockBtn);
+    }
+    card.appendChild(btnRow);
+
+    // Inline edit panel (hidden by default)
+    const editPanel=document.createElement('div');
+    editPanel.style.cssText='display:none;margin-top:10px;border-top:1px solid var(--border);padding-top:10px;';
+
+    // Hole range inputs
+    const hRow=document.createElement('div'); hRow.className='row';
+    const fd=document.createElement('div'); fd.innerHTML='<label class="lbl">Starting hole</label>';
+    const fromInp=document.createElement('input'); fromInp.type='number'; fromInp.value=rot.start;
+    fd.appendChild(fromInp); hRow.appendChild(fd);
+    const td=document.createElement('div'); td.innerHTML='<label class="lbl">Number of holes</label>';
+    const numInp=document.createElement('input'); numInp.type='number'; numInp.value=rot.end-rot.start+1;
+    td.appendChild(numInp); hRow.appendChild(td);
+    editPanel.appendChild(hRow);
+
+    // Pairing chips
+    const pNote=document.createElement('p'); pNote.style.cssText='font-size:12px;color:var(--muted);margin-bottom:5px;';
+    pNote.textContent=np()===5
+      ?'Pick fixed pair (plays all combos of others):'
+      :'Pick team A (2 players):';
+    editPanel.appendChild(pNote);
+    const chipRow=document.createElement('div'); chipRow.className='chip-row';
+    // Determine current teamA from first matchup
+    let editTeamA=rot.matchups[0].teamA.slice();
+    nms.forEach((nm,i)=>{
+      const b=document.createElement('button'); b.className='chip'+(editTeamA.includes(i)?' on':'');
+      b.dataset.idx=i;
+      if(np()===5){const cnt=pairCounts();if(cnt[i]>=2&&!editTeamA.includes(i)){b.disabled=true;b.style.opacity='0.38';}}
+      b.innerHTML=np()===5?nm+' <sup>'+pairCounts()[i]+'</sup>':nm;
+      b.onclick=()=>{
+        if(b.disabled) return;
+        editTeamA.includes(i)?editTeamA=editTeamA.filter(x=>x!==i):editTeamA.length<2&&editTeamA.push(i);
+        chipRow.querySelectorAll('button').forEach(bb=>bb.classList.toggle('on',editTeamA.includes(+bb.dataset.idx)));
+      };
+      chipRow.appendChild(b);
+    });
+    editPanel.appendChild(chipRow);
+
+    // Error + save
+    const err=document.createElement('p'); err.style.cssText='font-size:12px;color:var(--red);display:none;margin-bottom:5px;';
+    editPanel.appendChild(err);
+    const saveBtn=document.createElement('button'); saveBtn.className='btn-primary'; saveBtn.textContent='Save changes';
+    saveBtn.onclick=()=>{
+      const newStart=+fromInp.value, newNumHoles=+numInp.value;
+      const newEnd=newStart+newNumHoles-1;
+      if(!newStart||!newNumHoles||newNumHoles<1){err.textContent='Invalid starting hole or number of holes.';err.style.display='block';return;}
+      if(editTeamA.length!==2){err.textContent='Pick exactly 2 players.';err.style.display='block';return;}
+      err.style.display='none';
+      const allIdx=nms.map((_,i)=>i), rest=allIdx.filter(i=>!editTeamA.includes(i));
+      rot.start=newStart; rot.end=newEnd;
+      if(np()===5){
+        rot.matchups=[[rest[0],rest[1]],[rest[0],rest[2]],[rest[1],rest[2]]].map(c=>({teamA:editTeamA.slice(),teamB:c}));
+      } else {
+        rot.matchups=[{teamA:editTeamA.slice(),teamB:rest}];
+      }
+      renderRotations();
+    };
+    editPanel.appendChild(saveBtn);
+    card.appendChild(editPanel);
+
+    editBtn.onclick=()=>{
+      const open=editPanel.style.display!=='none';
+      editPanel.style.display=open?'none':'block';
+      editBtn.textContent=open?'edit':'cancel';
+    };
+
+    c.appendChild(card);
+  });
+}
+
+// ─── SCORECARD ────────────────────────────────────────────────────────────────
+document.getElementById('sc-prev').onclick=()=>{if(S.curHole>1){S.curHole--;renderScorecard();}};
+document.getElementById('sc-next').onclick=()=>{
+  const hole=S.curHole, rot=segForHole(hole);
+  // Lock rotation when we advance past its final hole with all scores complete
+  if(rot&&hole===rot.end&&!rot.locked){
+    const last=lastScoredHole(rot);
+    if(last===rot.end){ rot.locked=true; autosave(); }
+  }
+  if(S.curHole<S.holes){S.curHole++;renderScorecard();}
+  else if(S.curHole===S.holes){go('summary');}
+};
+
+function renderScorecard(){
+  const hole=S.curHole; ensureScore(hole);
+  const par=S.par[hole-1], si=S.si[hole-1];
+  const rot=segForHole(hole);
+  const inHawk=hole>=S.hawkStart;
+  document.getElementById('sc-hole-lbl').textContent='Hole '+hole+' — Par '+par;
+  document.getElementById('sc-hole-sub').textContent=
+    inHawk?'Hawk · SI '+si
+    :rot?'Rotation '+rot.start+'–'+rot.end+' · SI '+si
+    :'No rotation · SI '+si;
+  renderSCActions();
+  renderSCTable();
+  renderSCResults();
+}
+
+function renderSCTable(focusTarget){
+  const hole=S.curHole, nms=ns(), tbl=document.getElementById('sc-tbl');
+  let html='<tr><th>Player</th><th>Stk</th><th>Gross</th><th>Net</th><th style="width:70px">Pos</th></tr>';
+  nms.forEach((nm,i)=>{
+    const strk=dailyStrokes(i,hole);
+    const xFlag=isX(hole,i);
+    const gv=xFlag?'X':(S.scores[hole].gross[i]===''?'':S.scores[hole].gross[i]);
+    const net=dailyNet(i,hole);
+    const netDisp=net===null?'—':net.val+(net.x?' <span style="font-size:10px;color:var(--red)">(X)</span>':'');
+    const posv=S.scores[hole].pos[i];
+    html+='<tr>'
+      +'<td style="font-size:12.5px">'+nm+'</td>'
+      +'<td style="text-align:center;color:var(--muted)">'+(strk>0?'+'+strk:'—')+'</td>'
+      +'<td><input class="g-inp" data-i="'+i+'" inputmode="numeric" value="'+(xFlag?'X':gv)+'" style="background:'+(xFlag?'#fee':'')+'"></td>'
+      +'<td style="text-align:center;font-size:12px;color:var(--muted)">'+netDisp+'</td>'
+      +'<td><div style="display:flex;align-items:center;gap:2px;justify-content:center;">'
+      +'<button class="pos-minus" data-i="'+i+'" style="width:26px;height:28px;padding:0;font-size:16px;font-weight:700;line-height:1;flex-shrink:0;">−</button>'
+      +'<input class="pos-inp" data-i="'+i+'" inputmode="numeric" value="'+(posv===''?'0':posv)+'" style="width:32px;text-align:center;font-size:14px;font-weight:600;padding:4px 2px;border:1px solid var(--border-strong);border-radius:6px;">'
+      +'<button class="pos-plus" data-i="'+i+'" style="width:26px;height:28px;padding:0;font-size:16px;font-weight:700;line-height:1;flex-shrink:0;">+</button>'
+      +'</div></td>'
+      +'</tr>';
+  });
+  tbl.innerHTML=html;
+
+  const n=nms.length;
+
+  tbl.querySelectorAll('.g-inp').forEach(inp=>{
+    inp.oninput=e=>{
+      const i=+e.target.dataset.i, v=e.target.value.trim().toUpperCase();
+      if(v==='X'||v==='x'||v==='99'){
+        S.scores[hole].x[i]=true; S.scores[hole].gross[i]=''; e.target.value='X'; e.target.style.background='#fee';
+      } else {
+        S.scores[hole].x[i]=false; S.scores[hole].gross[i]=v===''?'':+v||''; e.target.style.background='';
+      }
+      autosave(); renderSCTable('g-'+i); renderSCResults();
+    };
+    inp.addEventListener('keydown', e=>{
+      if(e.key==='Enter'){
+        e.preventDefault();
+        const i=+inp.dataset.i;
+        const next=tbl.querySelector('.pos-inp[data-i="'+i+'"]');
+        if(next) next.focus();
+      }
+    });
+  });
+
+  tbl.querySelectorAll('.pos-minus, .pos-plus').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      const i=+btn.dataset.i;
+      const cur=+(S.scores[hole].pos[i])||0;
+      const delta=btn.classList.contains('pos-plus')?1:-1;
+      S.scores[hole].pos[i]=cur+delta;
+      const inp=tbl.querySelector('.pos-inp[data-i="'+i+'"]');
+      if(inp) inp.value=S.scores[hole].pos[i];
+      autosave(); renderSCResults();
+    });
+  });
+
+  tbl.querySelectorAll('.pos-inp').forEach(inp=>{
+    inp.oninput=e=>{
+      const i=+inp.dataset.i;
+      const v=inp.value.trim();
+      S.scores[hole].pos[i]=v===''?0:parseInt(v)||0;
+      autosave(); renderSCResults();
+    };
+  });
+
+  // Restore focus after re-render
+  if(focusTarget){
+    const[type,idx]=focusTarget.split('-');
+    const el=tbl.querySelector('.'+(type==='g'?'g-inp':'p-inp')+'[data-i="'+idx+'"]');
+    if(el){ el.focus(); // move cursor to end
+      if(el.type==='text'||el.type===''){try{el.setSelectionRange(el.value.length,el.value.length);}catch(e){}}
+    }
+  }
+}
+
+function renderSCActions(){
+  // Hawk: Hawk is always active from hole 1 — no actions needed
+  const c=document.getElementById('sc-actions'); c.innerHTML='';
+}
+
+function showHawkPicker(candidates,money,cb){
+  const c=document.getElementById('sc-actions'); c.innerHTML='';
+  const msg=document.createElement('p'); msg.style.cssText='font-size:13px;margin:0 0 6px;width:100%;';
+  msg.textContent='Tied for most losses ('+Math.abs(money[candidates[0]]).toFixed(1)+' units). Pick the Hawk:';
+  c.appendChild(msg);
+  const row=document.createElement('div'); row.style.cssText='display:flex;gap:6px;flex-wrap:wrap;width:100%;';
+  candidates.forEach(i=>{
+    const b=document.createElement('button'); b.className='chip'; b.textContent=ns()[i];
+    b.onclick=()=>{S.hawkIdx=i;cb();};
+    row.appendChild(b);
+  });
+  c.appendChild(row);
+}
+
+function renderSCResults(){
+  const hole=S.curHole, nms=ns(), inHawk=hole>=S.hawkStart;
+  const c=document.getElementById('sc-results'); c.innerHTML='';
+
+  if(inHawk){
+    // Hawk section on scorecard
+    renderHawkOnScorecard(hole,c);
+    return;
+  }
+  const rot=segForHole(hole);
+  if(!rot){c.innerHTML='<p style="font-size:13px;color:var(--muted);margin-top:4px;">No rotation covers this hole.</p>';return;}
+
+  rot.matchups.forEach(m=>{
+    const card=document.createElement('div'); card.className='card';
+    const lbl=document.createElement('p'); lbl.style.cssText='font-size:13px;color:var(--muted);margin-bottom:4px;';
+    lbl.textContent=m.teamA.map(i=>nms[i]).join(' & ')+' vs '+m.teamB.map(i=>nms[i]).join(' & ');
+    card.appendChild(lbl);
+    const last=lastScoredHole(rot);
+    const r=rotRunning(m,rot.start,rot.end,last);
+    const st=statusLabel(r.aTotal,r.bTotal,rot.start,rot.end,last,last);
+    const pd=r.posA-r.posB;
+    const posCls=pd===0?'b-ev':pd>0?'b-up':'b-dn';
+    const posNote=(st.over?'Positives ended: ':'Positives: ')+(pd>=0?'+':'')+pd;
+    const sp=document.createElement('p'); sp.style.cssText='font-size:13px;font-weight:600;margin-bottom:3px;';
+    sp.innerHTML='<span class="'+st.cls+'">'+st.text+'</span> &nbsp;<span class="'+posCls+'">'+posNote+'</span>';
+    card.appendChild(sp);
+    const hr=holeResult(m,hole);
+    const hn=document.createElement('p'); hn.className='sn';
+    hn.textContent=hr?'This hole: A '+hr.aPts+' pt, B '+hr.bPts+' pt · pos A '+hr.posA+'/B '+hr.posB:'Waiting for all gross scores.';
+    card.appendChild(hn);
+    c.appendChild(card);
+  });
+}
+
+function renderHawkOnScorecard(hole,container){
+  const nms=ns(), hd=S.hawkData[hole]||{};
+  const n=np(), rotEnd=Math.floor(S.holes/n)*n;
+  const inRotation=hole<=rotEnd;
+
+  const money=totalMoneyBeforeHole(hole);
+  const minVal=Math.min(...money);
+  const candidates=money.map((_,i)=>i).filter(i=>money[i]===minVal);
+  const currentHawk=hawkForHole(hole);
+
+  const div=document.createElement('div'); div.className='card hawk-section';
+  const title=document.createElement('p'); title.className='hawk-title';
+  if(inRotation){
+    title.textContent='🦅 Hawk — '+nms[currentHawk]+' (H'+hole+', rotation)';
+  } else {
+    title.textContent='🦅 Hawk — '+nms[currentHawk]+' (most losses)';
+    if(candidates.length>1) title.textContent+=' (tied — tap to change)';
+  }
+  div.appendChild(title);
+
+  // Tie picker — only during money hawk phase
+  if(!inRotation&&candidates.length>1){
+    const tl=document.createElement('p'); tl.className='sn'; tl.style.marginBottom='4px';
+    tl.textContent='Tied for most losses ('+Math.abs(minVal).toFixed(1)+' units). Pick Hawk:';
+    div.appendChild(tl);
+    const tieRow=document.createElement('div'); tieRow.className='chip-row';
+    candidates.forEach(i=>{
+      const b=document.createElement('button'); b.className='chip'+(currentHawk===i?' on':'');
+      b.textContent=nms[i];
+      b.onclick=()=>{
+        if(!S.hawkData[hole]) S.hawkData[hole]={};
+        S.hawkData[hole].hawkIdx=i;
+        autosave(); renderSCResults();
+      };
+      tieRow.appendChild(b);
+    });
+    div.appendChild(tieRow);
+  }
+
+  // Mode: partner or pig — solid fill when selected for visibility outdoors
+  const modeRow=document.createElement('div'); modeRow.className='chip-row';
+  [['partner','Pick partner'],['pig','Pig it']].forEach(([key,lbl])=>{
+    const selected=hd.mode===key;
+    const b=document.createElement('button');
+    b.textContent=lbl;
+    b.className=selected?'hawk-btn-selected':'';
+    b.style.cssText='padding:6px 10px;font-size:12.5px;';
+    b.onclick=()=>{
+      if(!S.hawkData[hole]) S.hawkData[hole]={};
+      S.hawkData[hole].mode=key;
+      if(key==='pig') delete S.hawkData[hole].partnerIdx;
+      autosave(); renderSCResults();
+    };
+    modeRow.appendChild(b);
+  });
+  div.appendChild(modeRow);
+
+  // Double it — only available during money hawk phase (after rotation ends)
+  if(!inRotation){
+    const doubleRow=document.createElement('div'); doubleRow.className='chip-row'; doubleRow.style.marginTop='4px';
+    const doubled=!!(hd.doubled);
+    const db=document.createElement('button');
+    db.textContent='Double it';
+    db.className=doubled?'hawk-btn-selected':'';
+    db.style.cssText='padding:6px 10px;font-size:12.5px;';
+    db.onclick=()=>{
+      if(!S.hawkData[hole]) S.hawkData[hole]={};
+      S.hawkData[hole].doubled=!S.hawkData[hole].doubled;
+      autosave(); renderSCResults();
+    };
+    doubleRow.appendChild(db);
+    if(doubled){
+      const note=document.createElement('span');
+      note.style.cssText='font-size:12px;color:var(--red);font-weight:700;padding:6px 4px;';
+      note.textContent='2× units this hole';
+      doubleRow.appendChild(note);
+    }
+    div.appendChild(doubleRow);
+  }
+  if(hd.mode==='partner'){
+    const pp=document.createElement('p'); pp.className='sn'; pp.style.marginBottom='5px';
+    pp.textContent='Hawk partner:';
+    div.appendChild(pp);
+    const pRow=document.createElement('div'); pRow.className='chip-row';
+    nms.forEach((nm,i)=>{
+      if(i===currentHawk) return;
+      const selected=hd.partnerIdx===i;
+      const b=document.createElement('button');
+      b.textContent=nm;
+      b.className=selected?'hawk-btn-selected':'';
+      b.style.cssText='padding:6px 10px;font-size:12.5px;';
+      b.onclick=()=>{S.hawkData[hole].partnerIdx=i; autosave(); renderSCResults();};
+      pRow.appendChild(b);
+    });
+    div.appendChild(pRow);
+  }
+
+  // This hole's result only
+  const holeM=hawkHoleMoney(hole);
+  const anyScored=holeM.some(v=>v!==0);
+  if(anyScored){
+    const pg=document.createElement('div'); pg.className='pts-mini'; pg.style.marginTop='8px';
+    nms.forEach((nm,i)=>{
+      const pc=document.createElement('div'); pc.className='pts-card';
+      const v=holeM[i];
+      const cls=v>0?'pos':v<0?'neg':'';
+      pc.innerHTML='<p class="pts-nm">'+nm+'</p><p class="pts-v '+cls+'">'+(v>=0?'+':'')+v.toFixed(0)+' u</p>';
+      pg.appendChild(pc);
+    });
+    div.appendChild(pg);
+  } else {
+    const msg=document.createElement('p');
+    msg.style.cssText='font-size:12px;color:var(--muted);margin-top:8px;';
+    msg.textContent='Enter all scores to see result.';
+    div.appendChild(msg);
+  }
+  container.appendChild(div);
+
+  // Current hole recap card
+  const card=renderHawkHoleCard(hole);
+  if(card) container.appendChild(card);
+}
+
+// ─── SKINS ────────────────────────────────────────────────────────────────────
+function renderSkinsInto(container){
+  const nms=ns();
+  let html='<div style="overflow-x:auto"><table class="skin-tbl">';
+  html+='<tr><th>H</th><th>Par</th>';
+  nms.forEach(nm=>html+='<th>'+nm+'</th>');
+  html+='<th>Low</th><th>Winner</th></tr>';
+
+  for(let h=1;h<=S.holes;h++){
+    const nets=nms.map((_,i)=>skinNet(i,h));
+    const xFlags=nms.map((_,i)=>isX(h,i));
+    const allIn=nets.every(v=>v!==null);
+    const par=S.par[h-1];
+    const toPar=v=>v-par===0?'E':(v-par>0?'+'+(v-par):(v-par));
+
+    if(!allIn){
+      html+='<tr><td>'+h+'</td><td>'+par+'</td>';
+      nms.forEach((_,i)=>html+='<td style="text-align:center">'+(nets[i]===null?'—':nets[i]+(xFlags[i]?'<sup style="color:var(--red)">X</sup>':''))+'</td>');
+      html+='<td colspan="2" style="color:var(--muted);font-size:12px;">Incomplete</td></tr>';
+      continue;
+    }
+
+    // eligibility: X players cannot win skin
+    const elig=nets.map((v,i)=>xFlags[i]?null:v);
+    const eligVals=elig.filter(v=>v!==null);
+    const low=eligVals.length?Math.min(...eligVals):null;
+    const winners=low!==null?nms.filter((_,i)=>!xFlags[i]&&nets[i]===low):[];
+    const isWin=winners.length===1, isTie=winners.length>1;
+    const rowCls=isWin?'skin-win':isTie?'skin-tie':'';
+
+    html+='<tr class="'+rowCls+'"><td>'+h+'</td><td>'+par+'</td>';
+    nms.forEach((nm,i)=>{
+      const v=nets[i], x=xFlags[i], isW=isWin&&winners[0]===nm;
+      const disp=isW
+        ?'<span class="circled">'+v+'</span>'
+        :'<span style="'+(x?'color:var(--muted)':'')+(x?';font-style:italic':'')+'">'
+          +v+(x?'<sup style="color:var(--red)">X</sup>':'')+'</span>';
+      html+='<td style="text-align:center">'+disp+'</td>';
+    });
+    const dispLow=low!==null?low+'('+toPar(low)+')':'—';
+    html+='<td style="text-align:center;font-weight:'+(isWin?700:400)+'">'+dispLow+'</td>';
+    html+='<td>'+(isWin?'<strong>'+winners[0]+'</strong>':isTie?'TIED':'—')+'</td>';
+    html+='</tr>';
+  }
+  html+='</table></div>';
+
+  // ── Totals section ──
+  const totalPar = S.par.reduce((a,b)=>a+b,0);
+  // Gross totals (X counts as par+2 for gross display too)
+  const grossTotals = nms.map((_,i)=>{
+    let tot=0, complete=true;
+    for(let h=1;h<=S.holes;h++){
+      const g=getGross(h,i);
+      if(g===null){complete=false;break;}
+      tot += (g==='X') ? S.par[h-1]+2 : g;
+    }
+    return complete?tot:null;
+  });
+  // Net totals using full course handicap
+  const netTotals = nms.map((_,i)=>{
+    let tot=0, complete=true;
+    for(let h=1;h<=S.holes;h++){
+      const n=skinNet(i,h);
+      if(n===null){complete=false;break;}
+      tot+=n;
+    }
+    return complete?tot:null;
+  });
+  // Any X anywhere disqualifies from low net round winner
+  const hasAnyX = nms.map((_,i)=>{
+    for(let h=1;h<=S.holes;h++){ if(isX(h,i)) return true; }
+    return false;
+  });
+  const eligNetTotals = netTotals.map((v,i)=>hasAnyX[i]?null:v);
+  const eligVals = eligNetTotals.filter(v=>v!==null);
+  const lowNet = eligVals.length ? Math.min(...eligVals) : null;
+
+  html += '<div style="margin-top:14px;">';
+  html += '<p style="font-size:13px;font-weight:700;margin-bottom:7px;">Round totals</p>';
+  html += '<div style="overflow-x:auto"><table class="skin-tbl">';
+  html += '<tr><th></th><th>Par</th>';
+  nms.forEach(nm=>html+='<th>'+nm+'</th>');
+  html += '</tr>';
+
+  // Gross row
+  html += '<tr><td style="font-size:12px;color:var(--muted)">Gross</td><td style="text-align:center">'+totalPar+'</td>';
+  nms.forEach((_,i)=>{
+    const v=grossTotals[i];
+    html+='<td style="text-align:center">'+(v===null?'—':v)+'</td>';
+  });
+  html += '</tr>';
+
+  // Net row — highlight low net winner(s)
+  html += '<tr><td style="font-size:12px;color:var(--muted)">Net</td><td style="text-align:center">'+totalPar+'</td>';
+  nms.forEach((_,i)=>{
+    const v=netTotals[i];
+    const xd=hasAnyX[i];
+    const isLow=lowNet!==null&&v===lowNet&&!xd;
+    const multiLow=isLow&&eligVals.filter(x=>x===lowNet).length>1;
+    let cell;
+    if(v===null){ cell='—'; }
+    else if(isLow){
+      cell='<span class="circled" style="width:30px;height:30px;line-height:30px;font-size:14px;">'+v+'</span>';
+    } else if(xd){
+      cell='<span style="color:var(--muted)">'+v+'<sup style="color:var(--red)">X</sup></span>';
+    } else {
+      cell=v;
+    }
+    html+='<td style="text-align:center;'+(isLow?'background:var(--green-bg);':'')+'">'+(isLow&&multiLow?'<strong>':'')+cell+(isLow&&multiLow?'</strong>':'')+'</td>';
+  });
+  html += '</tr>';
+  html += '</table></div>';
+
+  // Low net callout
+  if(lowNet!==null){
+    const roundWinners=nms.filter((_,i)=>!hasAnyX[i]&&netTotals[i]===lowNet);
+    html+='<p style="font-size:13px;margin-top:8px;">';
+    if(roundWinners.length===1){
+      html+='🏆 Low net round: <strong>'+roundWinners[0]+'</strong> ('+lowNet+')';
+    } else {
+      html+='🏆 Low net tied: <strong>'+roundWinners.join(', ')+'</strong> ('+lowNet+')';
+    }
+    html+='</p>';
+  }
+  html+='</div>';
+
+  container.innerHTML=html;
+}
+
+function renderSkins(){
+  const wrap=document.getElementById('skins-wrap');
+  renderSkinsInto(wrap);
+}
+
+// ─── HAWK TAB (running totals only) ───────────────────────────────────────────
+function renderHawkHoleCard(h){
+  const nms=ns(), hd=S.hawkData[h];
+  if(!hd||!hd.mode) return null;
+  const hwIdx=hawkForHole(h), hwName=nms[hwIdx];
+  const allIdx=nms.map((_,i)=>i), others=allIdx.filter(i=>i!==hwIdx);
+  const sc=S.scores[h], pos=allIdx.map(i=>sc?(+(sc.pos[i])||0):0);
+
+  const card=document.createElement('div');
+  card.style.cssText='background:#faf9f5;border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;';
+
+  const hdr=document.createElement('p');
+  hdr.style.cssText='font-size:14px;font-weight:700;margin-bottom:6px;';
+  if(hd.mode==='pig'){
+    hdr.textContent='H'+h+' — Hawk: '+hwName+' (Pig)'+(hd.doubled?' 2×':'');
+  } else {
+    hdr.textContent='H'+h+' — Hawk: '+hwName+' / Partner: '+(hd.partnerIdx!==undefined?nms[hd.partnerIdx]:'?')+(hd.doubled?' 2×':'');
+  }
+  card.appendChild(hdr);
+
+  function ptLabel(cmp){ return cmp>0?'W':cmp<0?'L':'T'; }
+  function ptStyle(cmp){ return cmp>0?'color:var(--green);font-weight:700':cmp<0?'color:var(--red);font-weight:700':'color:var(--muted)'; }
+
+  if(hd.mode==='pig'){
+    const tbl=document.createElement('table');
+    tbl.style.cssText='width:100%;border-collapse:collapse;font-size:12.5px;';
+    tbl.innerHTML='<tr><th style="text-align:left;padding:3px 4px;font-size:11px;color:var(--muted)">vs</th>'
+      +'<th style="padding:3px 4px;font-size:11px;color:var(--muted);text-align:center">Net</th>'
+      +'<th style="padding:3px 4px;font-size:11px;color:var(--muted);text-align:center">Pos</th>'
+      +'<th style="padding:3px 4px;font-size:11px;color:var(--muted);text-align:right">Units</th></tr>';
+    const pigNet=dailyNet(hwIdx,h);
+    // Determine overall result (one tie all tie)
+    let anyLoss=false, anyTie=false, allScored=!!pigNet;
+    others.forEach(opp=>{
+      const oNet=dailyNet(opp,h);
+      if(!oNet){allScored=false;return;}
+      const c=compareNets(pigNet,oNet);
+      if(c<0) anyLoss=true;
+      if(c===0) anyTie=true;
+    });
+    const overallResult=anyLoss?'lose':anyTie?'push':allScored?'win':'push';
+    others.forEach(opp=>{
+      const oNet=dailyNet(opp,h);
+      // Show overall result (not individual) — one win all win, one tie all tie
+      const overallDisp=overallResult==='win'?'<span style="color:var(--green);font-weight:700;">W</span>'
+        :overallResult==='lose'?'<span style="color:var(--red);font-weight:700;">L</span>'
+        :'<span style="font-weight:700;">PUSH</span>';
+      const posDiff=pos[hwIdx]-pos[opp];
+      const posLbl=posDiff>0?'+'+posDiff:posDiff===0?'0':''+posDiff;
+      const posCls=posDiff>0?'color:var(--green);font-weight:700':posDiff<0?'color:var(--red);font-weight:700':'color:var(--muted)';
+      const mv=hawkMatchVal(true), pv=hawkPosVal(true);
+      const mVal=overallResult==='win'?2*mv:overallResult==='lose'?-2*mv:0;
+      const pVal=posDiff*pv, total=mVal+pVal;
+      const totalCls=total>0?'color:var(--green);font-weight:700':total<0?'color:var(--red);font-weight:700':'';
+      tbl.innerHTML+='<tr style="border-top:1px solid var(--border)">'
+        +'<td style="padding:4px;font-size:12.5px">'+nms[opp]+'</td>'
+        +'<td style="text-align:center;padding:4px;">'+overallDisp+'</td>'
+        +'<td style="text-align:center;padding:4px;'+posCls+'">'+posLbl+'</td>'
+        +'<td style="text-align:right;padding:4px;'+totalCls+'">'+(total>=0?'+':'')+total.toFixed(0)+' units</td>'
+        +'</tr>';
+    });
+    if(anyTie&&!anyLoss){
+      tbl.innerHTML+='<tr><td colspan="4" style="padding:4px;font-size:11px;color:var(--muted);font-style:italic;">One tie — all push on match</td></tr>';
+    }
+    if(anyLoss){
+      tbl.innerHTML+='<tr><td colspan="4" style="padding:4px;font-size:11px;color:var(--muted);font-style:italic;">One win — all win against pig</td></tr>';
+    }
+    card.appendChild(tbl);
+  } else if(hd.mode==='partner'&&hd.partnerIdx!==undefined){
+    const team=[hwIdx,hd.partnerIdx], rest=others.filter(i=>i!==hd.partnerIdx);
+    const oppMatchups=np()===5?[[rest[0],rest[1]],[rest[0],rest[2]],[rest[1],rest[2]]]:[rest];
+    const tn0=dailyNet(team[0],h), tn1=dailyNet(team[1],h);
+    function tLowHigh(n0,n1){ if(!n1)return{low:n0,high:n0}; return compareNets(n0,n1)>=0?{low:n0,high:n1}:{low:n1,high:n0}; }
+    const ta=(tn0&&tn1)?tLowHigh(tn0,tn1):null;
+    const mv=hawkMatchVal(false), pv=hawkPosVal(false);
+    const tbl=document.createElement('table');
+    tbl.style.cssText='width:100%;border-collapse:collapse;font-size:12.5px;';
+    tbl.innerHTML='<tr><th style="text-align:left;padding:3px 4px;font-size:11px;color:var(--muted)">vs</th>'
+      +'<th style="padding:3px 4px;font-size:11px;color:var(--muted);text-align:center">Low</th>'
+      +'<th style="padding:3px 4px;font-size:11px;color:var(--muted);text-align:center">High</th>'
+      +'<th style="padding:3px 4px;font-size:11px;color:var(--muted);text-align:center">Pos</th>'
+      +'<th style="padding:3px 4px;font-size:11px;color:var(--muted);text-align:right">Net</th></tr>';
+    oppMatchups.forEach(oppPair=>{
+      const on0=dailyNet(oppPair[0],h), on1=oppPair[1]!==undefined?dailyNet(oppPair[1],h):null;
+      const tb=on0?tLowHigh(on0,on1||on0):null;
+      const lowCmp=ta&&tb?compareNets(ta.low,tb.low):0;
+      const highCmp=ta&&tb?compareNets(ta.high,tb.high):0;
+      const posTeam=pos[team[0]]+pos[team[1]], posOpp=oppPair.reduce((s,i)=>s+pos[i],0);
+      const posDiff=posTeam-posOpp;
+      const posLbl=posDiff>0?'+'+posDiff:posDiff===0?'0':''+posDiff;
+      const posCls=posDiff>0?'color:var(--green);font-weight:700':posDiff<0?'color:var(--red);font-weight:700':'color:var(--muted)';
+      const mDiff=(lowCmp>0?1:lowCmp<0?-1:0)+(highCmp>0?1:highCmp<0?-1:0);
+      const mVal=mDiff*mv, pVal=posDiff*pv, total=mVal+pVal;
+      const totalCls=total>0?'color:var(--green);font-weight:700':total<0?'color:var(--red);font-weight:700':'';
+      tbl.innerHTML+='<tr style="border-top:1px solid var(--border)">'
+        +'<td style="padding:4px;font-size:12.5px">'+oppPair.map(i=>nms[i]).join(' & ')+'</td>'
+        +'<td style="text-align:center;padding:4px;'+ptStyle(lowCmp)+'">'+ptLabel(lowCmp)+'</td>'
+        +'<td style="text-align:center;padding:4px;'+ptStyle(highCmp)+'">'+ptLabel(highCmp)+'</td>'
+        +'<td style="text-align:center;padding:4px;'+posCls+'">'+posLbl+'</td>'
+        +'<td style="text-align:right;padding:4px;'+totalCls+'">'+(total>=0?'+':'')+total.toFixed(0)+' u</td>'
+        +'</tr>';
+    });
+    card.appendChild(tbl);
+  }
+  return card;
+}
+
+function renderHawkTab(){
+  const nms=ns(), hm=totalHawkMoney();
+  const tot=document.getElementById('hawk-totals'); tot.innerHTML='';
+  nms.forEach((nm,i)=>{
+    const pc=document.createElement('div'); pc.className='pts-card';
+    const cls=hm[i]>0?'pos':hm[i]<0?'neg':'';
+    pc.innerHTML='<p class="pts-nm">'+nm+'</p><p class="pts-v '+cls+'">'+(hm[i]>=0?'+':'')+hm[i].toFixed(0)+' u</p>';
+    tot.appendChild(pc);
+  });
+  const log=document.getElementById('hawk-hole-log'); log.innerHTML='';
+  const holes=Object.keys(S.hawkData).map(Number).sort((a,b)=>a-b);
+  if(!holes.length){log.innerHTML='<p style="font-size:13px;color:var(--muted)">No Hawk holes yet.</p>';return;}
+  holes.forEach(h=>{
+    const card=renderHawkHoleCard(h);
+    if(card) log.appendChild(card);
+  });
+}
+
+// ─── SUMMARY ──────────────────────────────────────────────────────────────────
+function renderSummary(){
+  const nms=ns(), tot=totalMoney();
+  const sum=tot.reduce((a,b)=>a+b,0);
+
+  const cards=document.getElementById('sum-cards'); cards.innerHTML='';
+  nms.forEach((nm,i)=>{
+    const card=document.createElement('div'); card.className='sum-card';
+    const cls=tot[i]>0?'pos':tot[i]<0?'neg':'';
+    const dollars=(tot[i]*S.posVal).toFixed(2);
+    card.innerHTML='<p class="sum-name">'+nm+'</p>'
+      +'<p class="sum-total '+cls+'">'+(+dollars>=0?'+':'')+'$'+Math.abs(+dollars).toFixed(2)+'</p>'
+      +'<p style="font-size:14px;font-weight:600;color:var(--muted)">'+(tot[i]>=0?'+':'')+tot[i].toFixed(0)+' units</p>';
+    cards.appendChild(card);
+  });
+
+  const det=document.getElementById('sum-detail'); let html='';
+
+  // Zero-sum audit
+  let auditErrors=[];
+  if(Math.abs(sum)>0.01) auditErrors.push('Overall total off by '+sum.toFixed(0)+' units');
+  Object.keys(S.hawkData).map(Number).sort((a,b)=>a-b).forEach(h=>{
+    const hm2=hawkHoleMoney(h);
+    const hSum=hm2.reduce((a,b)=>a+b,0);
+    if(Math.abs(hSum)>0.01) auditErrors.push('Hawk hole '+h+' off by '+Math.abs(hSum).toFixed(0)+' units');
+  });
+  if(auditErrors.length){
+    html+='<div style="background:var(--red-bg);border:1px solid var(--red);border-radius:8px;padding:10px 12px;margin-bottom:10px;">';
+    html+='<p style="color:var(--red);font-size:13px;font-weight:600;margin-bottom:4px;">⚠ Zero-sum discrepancy</p>';
+    auditErrors.forEach(e=>html+='<p style="color:var(--red);font-size:12px;margin:2px 0;">'+e+'</p>');
+    html+='</div>';
+  }
+
+  det.innerHTML=html;
+
+  // Collapsible Scorecard
+  const scBtn=document.createElement('button');
+  scBtn.style.cssText='width:100%;text-align:left;padding:10px 13px;font-size:14px;font-weight:600;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;';
+  scBtn.innerHTML='📋 Scorecard <span>▸</span>';
+  const scBody=document.createElement('div');
+  scBody.style.display='none'; scBody.style.marginBottom='10px';
+  scBtn.onclick=()=>{
+    const open=scBody.style.display!=='none';
+    scBody.style.display=open?'none':'block';
+    scBtn.querySelector('span').textContent=open?'▸':'▴';
+    if(!open){ scBody.innerHTML=''; renderCardInto(scBody); }
+  };
+  det.appendChild(scBtn); det.appendChild(scBody);
+
+  // Collapsible Skins
+  const skBtn=document.createElement('button');
+  skBtn.style.cssText='width:100%;text-align:left;padding:10px 13px;font-size:14px;font-weight:600;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;';
+  skBtn.innerHTML='🏌️ Skins <span>▸</span>';
+  const skBody=document.createElement('div');
+  skBody.style.display='none'; skBody.style.marginBottom='10px';
+  skBtn.onclick=()=>{
+    const open=skBody.style.display!=='none';
+    skBody.style.display=open?'none':'block';
+    skBtn.querySelector('span').textContent=open?'▸':'▴';
+    if(!open){ skBody.innerHTML=''; renderSkinsInto(skBody); }
+  };
+  det.appendChild(skBtn); det.appendChild(skBody);
+
+  // Collapsible Hawk hole-by-hole
+  const hwBtn=document.createElement('button');
+  hwBtn.style.cssText='width:100%;text-align:left;padding:10px 13px;font-size:14px;font-weight:600;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;';
+  hwBtn.innerHTML='🦅 Hawk <span>▸</span>';
+  const hwBody=document.createElement('div');
+  hwBody.style.display='none'; hwBody.style.marginBottom='10px';
+  hwBtn.onclick=()=>{
+    const open=hwBody.style.display!=='none';
+    hwBody.style.display=open?'none':'block';
+    hwBtn.querySelector('span').textContent=open?'▸':'▴';
+    if(!open){
+      hwBody.innerHTML='';
+      const hm=totalHawkMoney();
+      // Running totals mini cards
+      const mini=document.createElement('div'); mini.className='pts-mini'; mini.style.marginBottom='10px';
+      ns().forEach((nm,i)=>{
+        const pc=document.createElement('div'); pc.className='pts-card';
+        const cls=hm[i]>0?'pos':hm[i]<0?'neg':'';
+        pc.innerHTML='<p class="pts-nm">'+nm+'</p><p class="pts-v '+cls+'">'+(hm[i]>=0?'+':'')+hm[i].toFixed(0)+' units</p>';
+        mini.appendChild(pc);
+      });
+      hwBody.appendChild(mini);
+      const holes=Object.keys(S.hawkData).map(Number).sort((a,b)=>a-b);
+      if(!holes.length){const p=document.createElement('p');p.style.cssText='font-size:13px;color:var(--muted)';p.textContent='No Hawk holes yet.';hwBody.appendChild(p);}
+      else holes.forEach(h=>{ const card=renderHawkHoleCard(h); if(card) hwBody.appendChild(card); });
+    }
+  };
+  det.appendChild(hwBtn); det.appendChild(hwBody);
+
+  // Collapsible Nassau
+  const nvBtn=document.createElement('button');
+  nvBtn.style.cssText='width:100%;text-align:left;padding:10px 13px;font-size:14px;font-weight:600;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;';
+  nvBtn.innerHTML='⛳ Nassau <span>▸</span>';
+  const nvBody=document.createElement('div');
+  nvBody.style.display='none'; nvBody.style.marginBottom='10px';
+  nvBtn.onclick=()=>{
+    const open=nvBody.style.display!=='none';
+    nvBody.style.display=open?'none':'block';
+    nvBtn.querySelector('span').textContent=open?'▸':'▴';
+    if(!open){ nvBody.innerHTML=''; renderNassauInto(nvBody); }
+  };
+  det.appendChild(nvBtn); det.appendChild(nvBody);
+}
+
+// ─── SAVE / RESTORE ───────────────────────────────────────────────────────────
+const SAVE_KEY = 'hawk_state_v1';
+
+function saveState(){
+  try { S._savedAt=Date.now(); localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch(e){}
+}
+
+function loadState(){
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if(!raw) return false;
+    const saved = JSON.parse(raw);
+    if(!saved||!saved.started) return false;
+    Object.assign(S, saved);
+    return true;
+  } catch(e){ return false; }
+}
+
+function clearSave(){
+  try { localStorage.removeItem(SAVE_KEY); } catch(e){}
+}
+
+// Patch all state-mutating spots to auto-save
+// We wrap the key render functions that follow user input
+const _origRenderScorecard = renderScorecard;
+// Instead, call saveState() after every score/pos input — done inline below via a wrapper
+// Simpler: save after every tab switch and after every input change
+function autosave(){ saveState(); }
+
+// On page load — try to restore
+(function(){
+  if(loadState()){
+    // Re-render inputs with loaded player data
+    renderPInputs(); renderSiGrid();
+    // Unlock tabs — no rotations tab in Hawk
+    ['scorecard','summary'].forEach(t=>document.querySelector('[data-tab="'+t+'"]').disabled=false);
+    // Show resume banner
+    const banner=document.createElement('div');
+    banner.style.cssText='background:var(--gold-bg);border:1px solid var(--gold);border-radius:8px;padding:11px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;';
+    const msg=document.createElement('span');
+    msg.style.cssText='font-size:13px;color:var(--gold);font-weight:600;';
+    const dateStr=S._savedAt?new Date(S._savedAt).toLocaleString():'';
+    msg.textContent='⏱ Round in progress'+(dateStr?' · saved '+dateStr:'')+'. Resume or start new?';
+    const btnRow=document.createElement('div'); btnRow.style.cssText='display:flex;gap:7px;flex-shrink:0;';
+    const resumeBtn=document.createElement('button');
+    resumeBtn.textContent='Resume'; resumeBtn.style.cssText='font-size:12px;padding:5px 11px;background:var(--gold-bg);color:var(--gold);border-color:var(--gold);font-weight:600;';
+    resumeBtn.onclick=()=>{
+      banner.remove();
+      go('scorecard'); renderScorecard();
+    };
+    const newBtn=document.createElement('button');
+    newBtn.textContent='New round'; newBtn.style.cssText='font-size:12px;padding:5px 11px;';
+    newBtn.onclick=()=>{
+      clearSave();
+      Object.assign(S,{
+        players:[{name:'',hcp:0},{name:'',hcp:0},{name:'',hcp:0},{name:'',hcp:0}],
+        si:SI.slice(),par:PAR.slice(),holes:18,started:false,
+        matchVal:0,posVal:0.25,nassauVal:5,nassau:{},hawkStart:1,hawkIdx:null,
+        rotations:[],scores:{},hawkData:{},curHole:1,
+      });
+      ['scorecard','summary'].forEach(t=>document.querySelector('[data-tab="'+t+'"]').disabled=true);
+      document.querySelector('[data-tab="setup"]').disabled=false;
+      go('setup'); renderPInputs(); renderSiGrid();
+      banner.remove();
+    };
+    btnRow.appendChild(resumeBtn); btnRow.appendChild(newBtn);
+    banner.appendChild(msg); banner.appendChild(btnRow);
+    document.querySelector('.wrap').insertBefore(banner, document.querySelector('.tabs').nextSibling);
+  }
+})();
+
+// ─── EXPORT ───────────────────────────────────────────────────────────────────
+document.getElementById('export-print').onclick=()=>{
+  window.print();
+};
+
+document.getElementById('export-csv').onclick=()=>{
+  const nms=ns(), tot=totalMoney(), rm=rotationMoney(), hm=totalHawkMoney();
+  const rows=[];
+
+  // ── Scorecard ──
+  rows.push(['SCORECARD']);
+  const hdrRow=['Hole','Par','SI'];
+  nms.forEach(nm=>hdrRow.push(nm+' Gross', nm+' Net', nm+' Pos'));
+  rows.push(hdrRow);
+  for(let h=1;h<=S.holes;h++){
+    const row=[h, S.par[h-1], S.si[h-1]];
+    nms.forEach((_,i)=>{
+      const g=getGross(h,i);
+      const net=dailyNet(i,h);
+      const pos=S.scores[h]?(+(S.scores[h].pos[i])||0):'';
+      row.push(g===null?'':g==='X'?'X':g);
+      row.push(net===null?'':net.val+(net.x?' (X)':''));
+      row.push(pos);
+    });
+    rows.push(row);
+  }
+  rows.push([]);
+
+  // ── Skins ──
+  rows.push(['SKINS (full course handicap)']);
+  const skinHdr=['Hole','Par'];
+  nms.forEach(nm=>skinHdr.push(nm+' Net'));
+  skinHdr.push('Low Net','Winner');
+  rows.push(skinHdr);
+  for(let h=1;h<=S.holes;h++){
+    const nets=nms.map((_,i)=>skinNet(i,h));
+    const xFlags=nms.map((_,i)=>isX(h,i));
+    const allIn=nets.every(v=>v!==null);
+    const row=[h, S.par[h-1]];
+    nets.forEach((v,i)=>row.push(v===null?'':v+(xFlags[i]?' X':'')));
+    if(allIn){
+      const elig=nets.filter((v,i)=>!xFlags[i]);
+      const low=elig.length?Math.min(...elig):null;
+      const winners=low!==null?nms.filter((_,i)=>!xFlags[i]&&nets[i]===low):[];
+      row.push(low===null?'':low);
+      row.push(winners.length===1?winners[0]:winners.length>1?'TIED':'');
+    } else {
+      row.push('','Incomplete');
+    }
+    rows.push(row);
+  }
+  rows.push([]);
+
+  // ── Rotations ──
+  rows.push(['ROTATIONS']);
+  rows.push(['Rotation','Holes','Matchup','Result','Pos Diff']);
+  S.rotations.forEach((rot,ri)=>{
+    rot.matchups.forEach(m=>{
+      const r=rotRunning(m,rot.start,rot.end,rot.end);
+      const st=statusLabel(r.aTotal,r.bTotal,rot.start,rot.end,rot.end);
+      const pd=r.posA-r.posB;
+      rows.push([ri+1, rot.start+'–'+rot.end,
+        m.teamA.map(i=>nms[i]).join('&')+' vs '+m.teamB.map(i=>nms[i]).join('&'),
+        st.text, (pd>=0?'+':'')+pd]);
+    });
+  });
+  rows.push([]);
+
+  // ── Hawk holes ──
+  if(S.hawkStart<=S.holes){
+    rows.push(['HAWK HOLES']);
+    rows.push(['Hole','Hawk','Mode'].concat(nms.map(nm=>nm+' units')));
+    Object.keys(S.hawkData).map(Number).sort((a,b)=>a-b).forEach(h=>{
+      const hd=S.hawkData[h];
+      const hw=hawkForHole(h);
+      const hm2=hawkHoleMoney(h);
+      rows.push([h, nms[hw], hd.mode==='pig'?'Pig':'Partner: '+nms[hd.partnerIdx]]
+        .concat(hm2.map(v=>(v>=0?'+':'')+v.toFixed(0)+' units')));
+    });
+    rows.push([]);
+  }
+
+  // ── Final money ──
+  rows.push(['FINAL MONEY']);
+  rows.push(['Player','Rotations','Hawk','Total']);
+  nms.forEach((nm,i)=>{
+    rows.push([nm,
+      (rm[i]>=0?'+':'')+rm[i].toFixed(0)+' units',
+      (hm[i]>=0?'+':'')+hm[i].toFixed(0)+' units',
+      (tot[i]>=0?'+':'')+tot[i].toFixed(0)+' units']);
+  });
+
+  // ── Build CSV ──
+  const csv=rows.map(row=>row.map(cell=>{
+    const s=String(cell===null||cell===undefined?'':cell);
+    return s.includes(',')||s.includes('"')||s.includes('\n')
+      ? '"'+s.replace(/"/g,'""')+'"' : s;
+  }).join(',')).join('\n');
+
+  const blob=new Blob([csv],{type:'text/csv'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  const date=new Date().toISOString().slice(0,10);
+  a.href=url; a.download='hawk_'+date+'.csv';
+  a.click(); URL.revokeObjectURL(url);
+};
+
+// ─── SCORECARD TAB ───────────────────────────────────────────────────────────
+function renderCardInto(container){
+  const nms=ns();
+
+  function gDisp2(g,par){
+    if(g===null) return '—';
+    if(g==='X') return '<span style="color:var(--red)">X</span>';
+    const diff=g-par;
+    if(diff<=-2) return '<span style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;border:2px solid var(--green);"><span style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;border:2px solid var(--green);color:var(--green);font-weight:700;font-size:11px;">'+g+'</span></span>';
+    if(diff===-1) return '<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;border:2px solid var(--green);color:var(--green);font-weight:700;font-size:12px;">'+g+'</span>';
+    if(diff===1) return '<span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border:2px solid var(--muted);color:var(--muted);font-size:12px;">'+g+'</span>';
+    if(diff>=2) return '<span style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border:2px solid var(--red);"><span style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border:2px solid var(--red);color:var(--red);font-size:11px;">'+g+'</span></span>';
+    return g;
+  }
+
+  const card=document.createElement('div'); card.className='card';
+  let html='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px;">';
+
+  // Header: H, Par, then Gross/Net for each player
+  html+='<tr style="border-bottom:2px solid var(--border-strong);">'
+    +'<th style="padding:3px 4px;text-align:left;font-size:10px;color:var(--muted);">H</th>'
+    +'<th style="padding:3px 4px;text-align:center;font-size:10px;color:var(--muted);">Par</th>';
+  nms.forEach(nm=>{
+    html+='<th colspan="2" style="padding:3px 4px;text-align:center;font-size:10px;color:var(--muted);border-left:1px solid var(--border);">'+nm+'</th>';
+  });
+  html+='</tr>';
+
+  // Sub-header: Gross/Net labels
+  html+='<tr style="border-bottom:1px solid var(--border);">'
+    +'<th style="padding:2px 4px;"></th><th style="padding:2px 4px;"></th>';
+  nms.forEach(()=>{
+    html+='<th style="padding:2px 4px;text-align:center;font-size:9px;color:var(--muted);border-left:1px solid var(--border);">Grs</th>'
+      +'<th style="padding:2px 4px;text-align:center;font-size:9px;color:var(--muted);">Net</th>';
+  });
+  html+='</tr>';
+
+  // Track totals
+  const gFront=Array(np()).fill(0), nFront=Array(np()).fill(0);
+  const gBack=Array(np()).fill(0), nBack=Array(np()).fill(0);
+  const gTotal=Array(np()).fill(0), nTotal=Array(np()).fill(0);
+  const fComp=Array(np()).fill(true), bComp=Array(np()).fill(true);
+
+  for(let h=1;h<=S.holes;h++){
+    const par=S.par[h-1];
+    html+='<tr style="border-bottom:1px solid var(--border);">'
+      +'<td style="padding:4px;color:var(--muted);font-size:11px;">'+h+'</td>'
+      +'<td style="padding:4px;text-align:center;color:var(--muted);">'+par+'</td>';
+    nms.forEach((_,i)=>{
+      const g=getGross(h,i), net=dailyNet(i,h);
+      const gD=gDisp2(g,par);
+      const nD=net===null?'—':net.val+(net.x?'<sup style="font-size:8px;color:var(--red)">X</sup>':'');
+      html+='<td style="padding:4px;text-align:center;border-left:1px solid var(--border);">'+gD+'</td>'
+        +'<td style="padding:4px;text-align:center;color:var(--muted);">'+nD+'</td>';
+      if(g!==null){
+        const gV=(g==='X')?par+2:g, nV=net?net.val:0;
+        gTotal[i]+=gV; nTotal[i]+=nV;
+        if(h<=9){gFront[i]+=gV;nFront[i]+=nV;}else{gBack[i]+=gV;nBack[i]+=nV;}
+      } else {
+        if(h<=9) fComp[i]=false; else bComp[i]=false;
+      }
+    });
+    html+='</tr>';
+
+    if(h===9&&S.holes===18){
+      const fPar=S.par.slice(0,9).reduce((a,b)=>a+b,0);
+      html+='<tr style="border-top:2px solid var(--border-strong);border-bottom:2px solid var(--border-strong);background:#f5f3ee;font-weight:700;">'
+        +'<td style="padding:4px;font-size:11px;">OUT</td>'
+        +'<td style="padding:4px;text-align:center;">'+fPar+'</td>';
+      nms.forEach((_,i)=>{
+        html+='<td style="padding:4px;text-align:center;border-left:1px solid var(--border);">'+(fComp[i]?gFront[i]:'—')+'</td>'
+          +'<td style="padding:4px;text-align:center;">'+(fComp[i]?nFront[i]:'—')+'</td>';
+      });
+      html+='</tr>';
+    }
+  }
+
+  if(S.holes===18){
+    const bPar=S.par.slice(9,18).reduce((a,b)=>a+b,0);
+    html+='<tr style="border-top:2px solid var(--border-strong);border-bottom:1px solid var(--border);background:#f5f3ee;font-weight:700;">'
+      +'<td style="padding:4px;font-size:11px;">IN</td>'
+      +'<td style="padding:4px;text-align:center;">'+bPar+'</td>';
+    nms.forEach((_,i)=>{
+      html+='<td style="padding:4px;text-align:center;border-left:1px solid var(--border);">'+(bComp[i]?gBack[i]:'—')+'</td>'
+        +'<td style="padding:4px;text-align:center;">'+(bComp[i]?nBack[i]:'—')+'</td>';
+    });
+    html+='</tr>';
+  }
+
+  const tPar=S.par.slice(0,S.holes).reduce((a,b)=>a+b,0);
+  html+='<tr style="border-top:2px solid var(--border-strong);font-weight:700;background:#eae8e2;">'
+    +'<td style="padding:4px;font-size:11px;">TOT</td>'
+    +'<td style="padding:4px;text-align:center;">'+tPar+'</td>';
+  nms.forEach((_,i)=>{
+    const allDone=fComp[i]&&bComp[i];
+    html+='<td style="padding:4px;text-align:center;border-left:1px solid var(--border);">'+(allDone?gTotal[i]:'—')+'</td>'
+      +'<td style="padding:4px;text-align:center;">'+(allDone?nTotal[i]:'—')+'</td>';
+  });
+  html+='</tr></table></div>';
+  card.innerHTML=html;
+  container.appendChild(card);
+}
+
+function renderCard(){
+  const wrap=document.getElementById('card-wrap');
+  wrap.innerHTML='';
+  renderCardInto(wrap);
+}
+
+// ─── NASSAU ───────────────────────────────────────────────────────────────────
+function renderNassauInto(container){
+  const nms=ns(), wrap=container;
+  wrap.innerHTML='';
+
+  // Ensure nassau state exists for all pairs
+  if(!S.nassau) S.nassau={};
+  const pairs=[];
+  for(let a=0;a<np();a++) for(let b=a+1;b<np();b++) pairs.push([a,b]);
+  pairs.forEach(([a,b])=>{
+    const key=a+'-'+b;
+    if(!S.nassau[key]) S.nassau[key]={active:false, val:5};
+  });
+
+  // Nassau strokes for a pair
+  function nassauStrokes(pi,hole,pA,pB){
+    const hcpA=+(S.players[pA].hcp)||0, hcpB=+(S.players[pB].hcp)||0;
+    const diff=Math.abs(hcpA-hcpB);
+    const higherHcp=hcpA>hcpB?pA:pB;
+    if(pi!==higherHcp) return 0;
+    const si=S.si[hole-1];
+    const f=Math.floor(diff/18);
+    return f+(si<=(diff-f*18)?1:0);
+  }
+
+  function nassauNet(pi,hole,pA,pB){
+    const g=getGross(hole,pi);
+    if(g===null) return null;
+    const strokes=nassauStrokes(pi,hole,pA,pB);
+    return{val:(g==='X')?S.par[hole-1]+2:g-strokes, x:g==='X'};
+  }
+
+  function matchResult(pA,pB,start,end){
+    let aUp=0,bUp=0,scored=0;
+    for(let h=start;h<=end;h++){
+      const nA=nassauNet(pA,h,pA,pB), nB=nassauNet(pB,h,pA,pB);
+      if(!nA||!nB) continue;
+      scored++;
+      const cmp=compareNets(nA,nB);
+      if(cmp>0) aUp++; else if(cmp<0) bUp++;
+    }
+    return{aUp,bUp,scored};
+  }
+
+  // Overall totals — only active pairs
+  const totals=Array(np()).fill(0);
+
+  const activePairs=pairs.filter(([a,b])=>S.nassau[a+'-'+b].active);
+  const inactivePairs=pairs.filter(([a,b])=>!S.nassau[a+'-'+b].active);
+
+  function renderPairCard([pA,pB]){
+
+    const key=pA+'-'+pB;
+    const cfg=S.nassau[key];
+    const nassauVal=cfg.val||5;
+
+    const card=document.createElement('div'); card.className='card'; card.style.marginBottom='9px';
+
+    // Header row with toggle and amount
+    const hdrRow=document.createElement('div');
+    hdrRow.style.cssText='display:flex;align-items:center;gap:8px;margin-bottom:'+(cfg.active?'10px':'0')+';flex-wrap:wrap;';
+
+    // Toggle button
+    const tog=document.createElement('button');
+    tog.textContent=cfg.active?'ON':'OFF';
+    tog.className=cfg.active?'hawk-btn-selected btn-sm':'btn-sm';
+    tog.onclick=()=>{cfg.active=!cfg.active; autosave(); renderNassau();};
+
+    // Names label
+    const nameLabel=document.createElement('span');
+    nameLabel.style.cssText='font-size:14px;font-weight:700;flex:1;';
+    nameLabel.textContent=nms[pA]+' vs '+nms[pB];
+
+    // Dollar amount input
+    const amtWrap=document.createElement('div');
+    amtWrap.style.cssText='display:flex;align-items:center;gap:4px;';
+    const amtLabel=document.createElement('span');
+    amtLabel.style.cssText='font-size:12px;color:var(--muted);';
+    amtLabel.textContent='$';
+    const amtInp=document.createElement('input');
+    amtInp.type='number'; amtInp.min='1'; amtInp.step='1';
+    amtInp.value=nassauVal;
+    amtInp.style.cssText='width:55px;padding:5px 6px;font-size:13px;';
+    amtInp.oninput=e=>{cfg.val=+e.target.value||5; autosave();};
+    amtWrap.appendChild(amtLabel); amtWrap.appendChild(amtInp);
+
+    hdrRow.appendChild(tog);
+    hdrRow.appendChild(nameLabel);
+    hdrRow.appendChild(amtWrap);
+    card.appendChild(hdrRow);
+
+    if(!cfg.active){ wrap.appendChild(card); return; }
+
+    // Handicap note
+    const hcpA=+(S.players[pA].hcp)||0, hcpB=+(S.players[pB].hcp)||0;
+    const diff=Math.abs(hcpA-hcpB);
+    const higherName=hcpA>hcpB?nms[pA]:hcpA<hcpB?nms[pB]:'';
+    const hcpNote=document.createElement('p');
+    hcpNote.style.cssText='font-size:11px;color:var(--muted);margin-bottom:8px;';
+    hcpNote.textContent=diff===0?'Even handicap':(higherName+' gets '+diff+' stroke'+(diff!==1?'s':''));
+    card.appendChild(hcpNote);
+
+    // Bet results table
+    const bets=S.holes===18
+      ?[['Front',1,9],['Back',10,18],['Total',1,18]]
+      :[['Total',1,S.holes]];
+
+    const tbl=document.createElement('table');
+    tbl.style.cssText='width:100%;border-collapse:collapse;font-size:13px;';
+    tbl.innerHTML='<tr style="border-bottom:1px solid var(--border);">'
+      +'<th style="padding:4px;text-align:left;font-size:11px;color:var(--muted)">Bet</th>'
+      +'<th style="padding:4px;text-align:center;font-size:11px;color:var(--muted)">Status</th>'
+      +'<th style="padding:4px;text-align:right;font-size:11px;color:var(--muted)">Result</th>'
+      +'</tr>';
+
+    bets.forEach(([label,start,end])=>{
+      const{aUp,bUp,scored}=matchResult(pA,pB,start,end);
+      const totalHoles=end-start+1;
+      const diff2=aUp-bUp, rem=totalHoles-scored;
+      const over=scored>0&&(Math.abs(diff2)>rem||rem===0);
+      let statusText, statusCls;
+      if(scored===0){statusText='Not started';statusCls='color:var(--muted)';}
+      else if(diff2===0){statusText='All square'+(rem&&!over?' ('+rem+' left)':'');statusCls='color:var(--muted)';}
+      else if(diff2>0){statusText=nms[pA]+' '+(over?'wins '+Math.abs(diff2)+'&'+rem:Math.abs(diff2)+' up'+(rem?' ('+rem+' left)':''));statusCls='color:var(--green);font-weight:700';}
+      else{statusText=nms[pB]+' '+(over?'wins '+Math.abs(diff2)+'&'+rem:Math.abs(diff2)+' up'+(rem?' ('+rem+' left)':''));statusCls='color:var(--red);font-weight:700';}
+      let resultText='TBD', resultCls='color:var(--muted)';
+      if(over||rem===0){
+        const amt=diff2>0?nassauVal:diff2<0?-nassauVal:0;
+        totals[pA]+=amt; totals[pB]-=amt;
+        if(amt>0){resultText=nms[pA]+' +$'+nassauVal;resultCls='color:var(--green);font-weight:700';}
+        else if(amt<0){resultText=nms[pB]+' +$'+nassauVal;resultCls='color:var(--red);font-weight:700';}
+        else{resultText='Push';resultCls='color:var(--muted)';}
+      }
+      tbl.innerHTML+='<tr style="border-bottom:1px solid var(--border);">'
+        +'<td style="padding:5px 4px;font-weight:600;">'+label+'</td>'
+        +'<td style="padding:5px 4px;text-align:center;font-size:12px;'+statusCls+'">'+statusText+'</td>'
+        +'<td style="padding:5px 4px;text-align:right;font-size:12px;'+resultCls+'">'+resultText+'</td>'
+        +'</tr>';
+    });
+    card.appendChild(tbl);
+    wrap.appendChild(card);
+  }
+
+  activePairs.forEach(renderPairCard);
+
+  if(inactivePairs.length){
+    const inactiveCard=document.createElement('div');
+    inactiveCard.className='card';
+    inactiveCard.style.cssText='margin-bottom:9px;background:#f5f3ee;';
+    const inactiveBodyId='nassau-inactive-body';
+    const inactiveHdr=document.createElement('p');
+    inactiveHdr.style.cssText='font-size:13px;font-weight:600;cursor:pointer;margin:0;display:flex;justify-content:space-between;';
+    inactiveHdr.innerHTML='<span>Inactive matches</span><span style="font-weight:400;color:var(--muted);">▸</span>';
+    inactiveHdr.onclick=()=>{
+      const body=document.getElementById(inactiveBodyId);
+      const open=body.style.display!=='none';
+      body.style.display=open?'none':'block';
+      inactiveHdr.querySelector('span:last-child').textContent=open?'▸':'▴';
+    };
+    inactiveCard.appendChild(inactiveHdr);
+    const inactiveBody=document.createElement('div');
+    inactiveBody.id=inactiveBodyId; inactiveBody.style.display='none'; inactiveBody.style.marginTop='8px';
+    inactivePairs.forEach(([pA,pB])=>{
+      const p=document.createElement('p');
+      p.style.cssText='font-size:13px;color:var(--muted);padding:3px 0;';
+      p.textContent=nms[pA]+' vs '+nms[pB];
+      inactiveBody.appendChild(p);
+    });
+    inactiveCard.appendChild(inactiveBody);
+    wrap.appendChild(inactiveCard);
+  }
+
+  // Totals card — only if any active pairs
+  const anyActive=pairs.some(([a,b])=>S.nassau[a+'-'+b].active);
+  if(anyActive){
+    const totCard=document.createElement('div'); totCard.className='card';
+    totCard.style.background='#f5f3ee';
+    let totHtml='<p style="font-size:14px;font-weight:700;margin-bottom:8px;">Nassau Totals</p>';
+    totHtml+='<table style="width:100%;border-collapse:collapse;font-size:13px;">';
+    nms.forEach((nm,i)=>{
+      const cls=totals[i]>0?'color:var(--green);font-weight:700':totals[i]<0?'color:var(--red);font-weight:700':'color:var(--muted)';
+      totHtml+='<tr style="border-bottom:1px solid var(--border);">'
+        +'<td style="padding:5px 4px;">'+nm+'</td>'
+        +'<td style="padding:5px 4px;text-align:right;'+cls+'">'+(totals[i]>=0?'+$':'-$')+Math.abs(totals[i]).toFixed(0)+'</td>'
+        +'</tr>';
+    });
+    totHtml+='</table>';
+    totCard.innerHTML=totHtml;
+    wrap.appendChild(totCard);
+  }
+}
+
+function renderNassau(){
+  const wrap=document.getElementById('nassau-wrap');
+  if(wrap) renderNassauInto(wrap);
+}
+
+})();
+</script>
+</body>
+</html>
