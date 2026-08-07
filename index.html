@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Hawk v. 1.0</title>
+<title>Hawk v. 1.0.1</title>
 
 <!-- PWA / Add to Home Screen -->
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -573,8 +573,9 @@ function hawkHoleMoney(hole){
       }
     });
   }
-  // Apply double if called for this hole
-  if(hd.doubled) net.forEach((_,i)=>net[i]*=2);
+  // Apply multiplier (default 1)
+  const mult=hd.multiplier||1;
+  if(mult>1) net.forEach((_,i)=>net[i]*=mult);
   return net;
 }
 
@@ -1235,6 +1236,34 @@ function renderHawkOnScorecard(hole,container){
     div.appendChild(tieRow);
   }
 
+  // Ensure hawkData exists and multiplier is set
+  if(!S.hawkData[hole]) S.hawkData[hole]={};
+  if(!S.hawkData[hole].multiplier){
+    S.hawkData[hole].multiplier = inRotation ? 1 : 2;
+    autosave();
+  }
+  const mult=S.hawkData[hole].multiplier||1;
+
+  const multRow=document.createElement('div');
+  multRow.style.cssText='display:flex;align-items:center;gap:8px;margin-top:6px;';
+  const multLabel=document.createElement('label');
+  multLabel.style.cssText='font-size:12px;color:var(--muted);';
+  multLabel.textContent='Multiplier:';
+  const multSel=document.createElement('select');
+  multSel.style.cssText='width:80px;padding:5px 6px;font-size:13px;';
+  [1,2,3,4,5,6,7,8,9,10].forEach(v=>{
+    const opt=document.createElement('option');
+    opt.value=v; opt.textContent=v+'×';
+    if(v===mult) opt.selected=true;
+    multSel.appendChild(opt);
+  });
+  multSel.onchange=e=>{
+    S.hawkData[hole].multiplier=+e.target.value;
+    autosave(); renderSCResults();
+  };
+  multRow.appendChild(multLabel); multRow.appendChild(multSel);
+  div.appendChild(multRow);
+
   // Mode: partner or pig — solid fill when selected for visibility outdoors
   const modeRow=document.createElement('div'); modeRow.className='chip-row';
   [['partner','Pick partner'],['pig','Pig it']].forEach(([key,lbl])=>{
@@ -1253,28 +1282,6 @@ function renderHawkOnScorecard(hole,container){
   });
   div.appendChild(modeRow);
 
-  // Double it — only available during money hawk phase (after rotation ends)
-  if(!inRotation){
-    const doubleRow=document.createElement('div'); doubleRow.className='chip-row'; doubleRow.style.marginTop='4px';
-    const doubled=!!(hd.doubled);
-    const db=document.createElement('button');
-    db.textContent='Double it';
-    db.className=doubled?'hawk-btn-selected':'';
-    db.style.cssText='padding:6px 10px;font-size:12.5px;';
-    db.onclick=()=>{
-      if(!S.hawkData[hole]) S.hawkData[hole]={};
-      S.hawkData[hole].doubled=!S.hawkData[hole].doubled;
-      autosave(); renderSCResults();
-    };
-    doubleRow.appendChild(db);
-    if(doubled){
-      const note=document.createElement('span');
-      note.style.cssText='font-size:12px;color:var(--red);font-weight:700;padding:6px 4px;';
-      note.textContent='2× units this hole';
-      doubleRow.appendChild(note);
-    }
-    div.appendChild(doubleRow);
-  }
   if(hd.mode==='partner'){
     const pp=document.createElement('p'); pp.className='sn'; pp.style.marginBottom='5px';
     pp.textContent='Hawk partner:';
@@ -1466,10 +1473,12 @@ function renderHawkHoleCard(h){
 
   const hdr=document.createElement('p');
   hdr.style.cssText='font-size:14px;font-weight:700;margin-bottom:6px;';
+  const mult=hd.multiplier||1;
+  const multStr=mult>1?' ('+mult+'×)':'';
   if(hd.mode==='pig'){
-    hdr.textContent='H'+h+' — Hawk: '+hwName+' (Pig)'+(hd.doubled?' 2×':'');
+    hdr.textContent='H'+h+' — Hawk: '+hwName+' (Pig)'+multStr;
   } else {
-    hdr.textContent='H'+h+' — Hawk: '+hwName+' / Partner: '+(hd.partnerIdx!==undefined?nms[hd.partnerIdx]:'?')+(hd.doubled?' 2×':'');
+    hdr.textContent='H'+h+' — Hawk: '+hwName+' / Partner: '+(hd.partnerIdx!==undefined?nms[hd.partnerIdx]:'?')+multStr;
   }
   card.appendChild(hdr);
 
@@ -1505,7 +1514,7 @@ function renderHawkHoleCard(h){
       const posCls=posDiff>0?'color:var(--green);font-weight:700':posDiff<0?'color:var(--red);font-weight:700':'color:var(--muted)';
       const mv=hawkMatchVal(true), pv=hawkPosVal(true);
       const mVal=overallResult==='win'?2*mv:overallResult==='lose'?-2*mv:0;
-      const pVal=posDiff*pv, total=mVal+pVal;
+      const pVal=posDiff*pv, total=(mVal+pVal)*mult;
       const totalCls=total>0?'color:var(--green);font-weight:700':total<0?'color:var(--red);font-weight:700':'';
       tbl.innerHTML+='<tr style="border-top:1px solid var(--border)">'
         +'<td style="padding:4px;font-size:12.5px">'+nms[opp]+'</td>'
@@ -1545,7 +1554,7 @@ function renderHawkHoleCard(h){
       const posLbl=posDiff>0?'+'+posDiff:posDiff===0?'0':''+posDiff;
       const posCls=posDiff>0?'color:var(--green);font-weight:700':posDiff<0?'color:var(--red);font-weight:700':'color:var(--muted)';
       const mDiff=(lowCmp>0?1:lowCmp<0?-1:0)+(highCmp>0?1:highCmp<0?-1:0);
-      const mVal=mDiff*mv, pVal=posDiff*pv, total=mVal+pVal;
+      const mVal=mDiff*mv, pVal=posDiff*pv, total=(mVal+pVal)*mult;
       const totalCls=total>0?'color:var(--green);font-weight:700':total<0?'color:var(--red);font-weight:700':'';
       tbl.innerHTML+='<tr style="border-top:1px solid var(--border)">'
         +'<td style="padding:4px;font-size:12.5px">'+oppPair.map(i=>nms[i]).join(' & ')+'</td>'
