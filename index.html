@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Hawk v. 1.0.1</title>
+<title>Hawk v. 1.1</title>
 
 <!-- PWA / Add to Home Screen -->
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -137,11 +137,12 @@ table.det td:last-child,table.det th:last-child{text-align:right;}
 <body>
 <div class="wrap">
 <h1>Hawk</h1>
-<p class="sub">Whidbey Golf Club — v. 1.0.1</p>
+<p class="sub">Whidbey Golf Club — v. 1.1</p>
 
 <div class="tabs">
   <button class="tab on"  data-tab="setup">Setup</button>
   <button class="tab" data-tab="scorecard" disabled>Score Entry</button>
+  <button class="tab" data-tab="nassau"    disabled>Nassau</button>
   <button class="tab" data-tab="summary"   disabled>Summary</button>
 </div>
 
@@ -243,7 +244,7 @@ table.det td:last-child,table.det th:last-child{text-align:right;}
 <!-- NASSAU -->
 <div class="panel" id="panel-nassau">
   <p class="muted">Nassau — match play between every pair</p>
-  <div id="nassau-wrap"></div>
+  <div id="nassau-tab-wrap"></div>
 </div>
 
 <!-- SUMMARY -->
@@ -599,6 +600,7 @@ function go(tab){
   document.getElementById('panel-'+tab).classList.add('on');
   document.querySelector('[data-tab="'+tab+'"]').classList.add('on');
   if(tab==='scorecard') renderScorecard();
+  if(tab==='nassau')    renderNassauTab();
   if(tab==='card')      renderCard();
   if(tab==='skins')     renderSkins();
   if(tab==='summary')   renderSummary();
@@ -769,7 +771,7 @@ document.getElementById('start-btn').onclick=()=>{
   S.started=true; S.hawkStart=1; S.hawkIdx=null;
   S.rotations=[]; S.scores={}; S.hawkData={}; S.curHole=1;
   autosave();
-  ['scorecard','summary'].forEach(t=>document.querySelector('[data-tab="'+t+'"]').disabled=false);
+  ['scorecard','nassau','summary'].forEach(t=>document.querySelector('[data-tab="'+t+'"]').disabled=false);
   go('scorecard'); renderScorecard();
 };
 
@@ -1684,6 +1686,7 @@ function renderSummary(){
   nvBtn.style.cssText='width:100%;text-align:left;padding:10px 13px;font-size:14px;font-weight:600;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;';
   nvBtn.innerHTML='⛳ Nassau <span>▸</span>';
   const nvBody=document.createElement('div');
+  nvBody.id='nassau-sum-body';
   nvBody.style.display='none'; nvBody.style.marginBottom='10px';
   nvBtn.onclick=()=>{
     const open=nvBody.style.display!=='none';
@@ -1729,7 +1732,7 @@ function autosave(){ saveState(); }
     // Re-render inputs with loaded player data
     renderPInputs(); renderSiGrid();
     // Unlock tabs — no rotations tab in Hawk
-    ['scorecard','summary'].forEach(t=>document.querySelector('[data-tab="'+t+'"]').disabled=false);
+    ['scorecard','nassau','summary'].forEach(t=>document.querySelector('[data-tab="'+t+'"]').disabled=false);
     // Show resume banner
     const banner=document.createElement('div');
     banner.style.cssText='background:var(--gold-bg);border:1px solid var(--gold);border-radius:8px;padding:11px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;';
@@ -1754,7 +1757,7 @@ function autosave(){ saveState(); }
         matchVal:0,posVal:0.25,nassauVal:5,nassau:{},hawkStart:1,hawkIdx:null,
         rotations:[],scores:{},hawkData:{},curHole:1,
       });
-      ['scorecard','summary'].forEach(t=>document.querySelector('[data-tab="'+t+'"]').disabled=true);
+      ['scorecard','nassau','summary'].forEach(t=>document.querySelector('[data-tab="'+t+'"]').disabled=true);
       document.querySelector('[data-tab="setup"]').disabled=false;
       go('setup'); renderPInputs(); renderSiGrid();
       banner.remove();
@@ -1981,6 +1984,18 @@ function renderCard(){
 }
 
 // ─── NASSAU ───────────────────────────────────────────────────────────────────
+function renderNassauTab(){
+  const wrap=document.getElementById('nassau-tab-wrap');
+  if(wrap) renderNassauInto(wrap);
+}
+
+function renderAllNassau(){
+  // Refresh both the tab and the summary collapsible if open
+  renderNassauTab();
+  const sumBody=document.getElementById('nassau-sum-body');
+  if(sumBody&&sumBody.style.display!=='none') renderNassauInto(sumBody);
+}
+
 function renderNassauInto(container){
   const nms=ns(), wrap=container;
   wrap.innerHTML='';
@@ -2046,7 +2061,7 @@ function renderNassauInto(container){
     const tog=document.createElement('button');
     tog.textContent=cfg.active?'ON':'OFF';
     tog.className=cfg.active?'hawk-btn-selected btn-sm':'btn-sm';
-    tog.onclick=()=>{cfg.active=!cfg.active; autosave(); renderNassau();};
+    tog.onclick=()=>{cfg.active=!cfg.active; autosave(); renderAllNassau();};
 
     // Names label
     const nameLabel=document.createElement('span');
@@ -2082,44 +2097,115 @@ function renderNassauInto(container){
     hcpNote.textContent=diff===0?'Even handicap':(higherName+' gets '+diff+' stroke'+(diff!==1?'s':''));
     card.appendChild(hcpNote);
 
-    // Bet results table
+    // Bet results table — with press support
     const bets=S.holes===18
       ?[['Front',1,9],['Back',10,18],['Total',1,18]]
       :[['Total',1,S.holes]];
 
-    const tbl=document.createElement('table');
-    tbl.style.cssText='width:100%;border-collapse:collapse;font-size:13px;';
-    tbl.innerHTML='<tr style="border-bottom:1px solid var(--border);">'
-      +'<th style="padding:4px;text-align:left;font-size:11px;color:var(--muted)">Bet</th>'
-      +'<th style="padding:4px;text-align:center;font-size:11px;color:var(--muted)">Status</th>'
-      +'<th style="padding:4px;text-align:right;font-size:11px;color:var(--muted)">Result</th>'
-      +'</tr>';
+    if(!cfg.presses) cfg.presses={};
 
     bets.forEach(([label,start,end])=>{
-      const{aUp,bUp,scored}=matchResult(pA,pB,start,end);
-      const totalHoles=end-start+1;
-      const diff2=aUp-bUp, rem=totalHoles-scored;
-      const over=scored>0&&(Math.abs(diff2)>rem||rem===0);
-      let statusText, statusCls;
-      if(scored===0){statusText='Not started';statusCls='color:var(--muted)';}
-      else if(diff2===0){statusText='All square'+(rem&&!over?' ('+rem+' left)':'');statusCls='color:var(--muted)';}
-      else if(diff2>0){statusText=nms[pA]+' '+(over?'wins '+Math.abs(diff2)+'&'+rem:Math.abs(diff2)+' up'+(rem?' ('+rem+' left)':''));statusCls='color:var(--green);font-weight:700';}
-      else{statusText=nms[pB]+' '+(over?'wins '+Math.abs(diff2)+'&'+rem:Math.abs(diff2)+' up'+(rem?' ('+rem+' left)':''));statusCls='color:var(--red);font-weight:700';}
-      let resultText='TBD', resultCls='color:var(--muted)';
-      if(over||rem===0){
-        const amt=diff2>0?nassauVal:diff2<0?-nassauVal:0;
-        totals[pA]+=amt; totals[pB]-=amt;
-        if(amt>0){resultText=nms[pA]+' +$'+nassauVal;resultCls='color:var(--green);font-weight:700';}
-        else if(amt<0){resultText=nms[pB]+' +$'+nassauVal;resultCls='color:var(--red);font-weight:700';}
-        else{resultText='Push';resultCls='color:var(--muted)';}
-      }
-      tbl.innerHTML+='<tr style="border-bottom:1px solid var(--border);">'
-        +'<td style="padding:5px 4px;font-weight:600;">'+label+'</td>'
-        +'<td style="padding:5px 4px;text-align:center;font-size:12px;'+statusCls+'">'+statusText+'</td>'
-        +'<td style="padding:5px 4px;text-align:right;font-size:12px;'+resultCls+'">'+resultText+'</td>'
-        +'</tr>';
+      // Section wrapper
+      const section=document.createElement('div');
+      section.style.cssText='border:1px solid var(--border);border-radius:6px;margin-bottom:8px;overflow:hidden;';
+
+      // Gather all bets for this section: original + any presses
+      // presses[label] = array of {fromHole} (press starts)
+      if(!cfg.presses[label]) cfg.presses[label]=[];
+      const pressList=cfg.presses[label];
+
+      // Build list of all bets to show: [{betLabel, start, end}]
+      const allBets=[{betLabel:label, start, end}];
+      pressList.forEach((p,pi)=>{
+        allBets.push({betLabel:'Press '+(pi+1), start:p.fromHole, end});
+      });
+
+      allBets.forEach(({betLabel,start:bStart,end:bEnd},bi)=>{
+        const{aUp,bUp,scored}=matchResult(pA,pB,bStart,bEnd);
+        const totalHoles=bEnd-bStart+1;
+        const lead=aUp-bUp, rem=totalHoles-scored;
+        const over=scored>0&&(Math.abs(lead)>rem||rem===0);
+
+        // Status
+        let statusText, statusCls;
+        if(scored===0){statusText='Not started';statusCls='color:var(--muted)';}
+        else if(lead===0){statusText='All square'+(rem&&!over?' ('+rem+' left)':'');statusCls='color:var(--muted)';}
+        else if(lead>0){statusText=nms[pA]+' '+(over?'wins '+Math.abs(lead)+'&'+rem:Math.abs(lead)+' up'+(rem?' ('+rem+' left)':''));statusCls='color:var(--green);font-weight:700';}
+        else{statusText=nms[pB]+' '+(over?'wins '+Math.abs(lead)+'&'+rem:Math.abs(lead)+' up'+(rem?' ('+rem+' left)':''));statusCls='color:var(--red);font-weight:700';}
+
+        // Result
+        let resultText='TBD', resultCls='color:var(--muted)';
+        if(over||rem===0){
+          const amt=lead>0?nassauVal:lead<0?-nassauVal:0;
+          totals[pA]+=amt; totals[pB]-=amt;
+          if(amt>0){resultText='+$'+nassauVal;resultCls='color:var(--green);font-weight:700';}
+          else if(amt<0){resultText='-$'+nassauVal;resultCls='color:var(--red);font-weight:700';}
+          else{resultText='Push';resultCls='color:var(--muted)';}
+        }
+
+        const row=document.createElement('div');
+        row.style.cssText='display:flex;align-items:center;gap:6px;padding:6px 8px;'+(bi>0?'border-top:1px solid var(--border);background:#f9f8f5;':'');
+
+        const betLbl=document.createElement('span');
+        betLbl.style.cssText='font-size:12px;font-weight:700;min-width:56px;';
+        betLbl.textContent=betLabel;
+
+        const statusSpan=document.createElement('span');
+        statusSpan.style.cssText='flex:1;font-size:11px;'+statusCls;
+        statusSpan.innerHTML=statusText;
+
+        const resultSpan=document.createElement('span');
+        resultSpan.style.cssText='font-size:12px;'+resultCls;
+        resultSpan.textContent=resultText;
+
+        row.appendChild(betLbl); row.appendChild(statusSpan); row.appendChild(resultSpan);
+
+        // Press button — show if either player is 2 down and section not over
+        // and we're past the start hole and there are holes remaining
+        if(!over && rem>0 && scored>0){
+          const canPressA=lead<=-2; // pA is 2 down
+          const canPressB=lead>=2;  // pB is 2 down
+          if(canPressA||canPressB){
+            // Find the current hole (last scored hole in section)
+            let lastScored=bStart;
+            for(let h=bEnd;h>=bStart;h--){
+              const nA=nassauNet(pA,h,pA,pB), nB=nassauNet(pB,h,pA,pB);
+              if(nA&&nB){lastScored=h;break;}
+            }
+            const nextHole=lastScored+1;
+            if(nextHole<=bEnd){
+              const pressBtn=document.createElement('button');
+              pressBtn.textContent='Press';
+              pressBtn.className='btn-sm';
+              pressBtn.style.cssText='font-size:11px;padding:3px 8px;background:var(--gold-bg);color:var(--gold);border-color:var(--gold);font-weight:700;';
+              pressBtn.onclick=()=>{
+                if(!cfg.presses[label]) cfg.presses[label]=[];
+                cfg.presses[label].push({fromHole:nextHole});
+                autosave(); renderAllNassau();
+              };
+              row.appendChild(pressBtn);
+            }
+          }
+        }
+
+        // Remove press button (for press rows)
+        if(bi>0){
+          const rmBtn=document.createElement('button');
+          rmBtn.textContent='✕';
+          rmBtn.className='btn-sm';
+          rmBtn.style.cssText='font-size:11px;padding:2px 6px;color:var(--muted);';
+          rmBtn.onclick=()=>{
+            cfg.presses[label].splice(bi-1,1);
+            autosave(); renderAllNassau();
+          };
+          row.appendChild(rmBtn);
+        }
+
+        section.appendChild(row);
+      });
+
+      card.appendChild(section);
     });
-    card.appendChild(tbl);
     wrap.appendChild(card);
   }
 
