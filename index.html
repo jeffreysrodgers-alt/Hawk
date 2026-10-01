@@ -162,8 +162,8 @@ table.det td:last-child,table.det th:last-child{text-align:right;}
       <span>Whidbey Golf Club</span><span style="font-size:12px;font-weight:400;color:var(--muted);">Stroke index &amp; par ▸</span>
     </p>
     <div id="si-body" style="display:none;margin-top:10px;">
-      <div class="si-grid" id="si-front"></div>
-      <div class="si-grid" id="si-back"></div>
+      <div id="si-front" style="margin-bottom:8px;"></div>
+      <div id="si-back"></div>
     </div>
   </div>
   <div class="card">
@@ -649,16 +649,42 @@ document.getElementById('rm-p').onclick=()=>{if(np()>4){S.players.pop();renderPI
 renderPInputs();
 
 function renderSiGrid(){
-  ['front','back'].forEach(side=>{
+  ['front','back'].forEach((side,half)=>{
     const el=document.getElementById('si-'+side); el.innerHTML='';
-    const [a,b]=side==='front'?[1,9]:[10,18];
-    for(let h=a;h<=b;h++){
-      const cell=document.createElement('div'); cell.className='si-cell';
-      const lab=document.createElement('label'); lab.textContent='H'+h+' p'+S.par[h-1];
-      const inp=document.createElement('input'); inp.type='number'; inp.min='1'; inp.max='18'; inp.value=S.si[h-1];
-      inp.oninput=e=>{S.si[h-1]=+e.target.value||h;};
-      cell.appendChild(lab); cell.appendChild(inp); el.appendChild(cell);
-    }
+    const table=document.createElement('table');
+    table.style.cssText='width:100%;border-collapse:collapse;font-size:11px;';
+
+    const rows=[
+      {label:'H',  vals:Array.from({length:9},(_,i)=>half*9+i+1), editable:false, color:'var(--muted)', bold:true},
+      {label:'SI', vals:Array.from({length:9},(_,i)=>S.si[half*9+i]), editable:true, field:'si', color:'var(--text)', bold:false},
+    ];
+
+    rows.forEach(({label,vals,editable,field,color,bold})=>{
+      const tr=document.createElement('tr');
+      const th=document.createElement('td');
+      th.style.cssText='font-size:10px;font-weight:700;color:var(--muted);padding:3px 6px 3px 0;white-space:nowrap;';
+      th.textContent=label; tr.appendChild(th);
+      vals.forEach((v,col)=>{
+        const holeIdx=half*9+col;
+        const td=document.createElement('td');
+        td.style.cssText='padding:2px;';
+        if(editable){
+          const inp=document.createElement('input');
+          inp.type='number'; inp.min='1'; inp.max=field==='si'?'18':'6';
+          inp.value=v;
+          inp.style.cssText='width:100%;text-align:center;padding:2px 1px;font-size:11px;font-weight:'+(bold?'700':'400')+';color:'+color+';border:1px solid var(--border);border-radius:3px;';
+          inp.oninput=e=>{ S[field][holeIdx]=+e.target.value||v; };
+          td.appendChild(inp);
+        } else {
+          td.style.cssText+='text-align:center;border:1px solid var(--border);border-radius:3px;font-weight:'+(bold?'700':'400')+';color:'+color+';padding:3px 2px;';
+          td.textContent=v;
+        }
+        tr.appendChild(td);
+      });
+      table.appendChild(tr);
+    });
+
+    el.appendChild(table);
   });
 }
 renderSiGrid();
@@ -767,12 +793,17 @@ document.getElementById('start-btn').onclick=()=>{
   S.holes=+document.getElementById('hole-count').value;
   S.matchVal=0;
   S.posVal=+document.getElementById('pos-val').value||0.50;
-  S.nassauVal=5; // default, overridden per-pair in Nassau tab
+  S.nassauVal=5;
   S.started=true; S.hawkStart=1; S.hawkIdx=null;
   S.rotations=[]; S.scores={}; S.hawkData={}; S.curHole=1;
   autosave();
   ['scorecard','nassau','summary'].forEach(t=>document.querySelector('[data-tab="'+t+'"]').disabled=false);
   go('scorecard'); renderScorecard();
+};
+
+// Allow changing $ per unit mid-round without resetting state
+document.getElementById('pos-val').oninput=e=>{
+  if(S.started){ S.posVal=+e.target.value||0.50; autosave(); }
 };
 
 // ─── ROTATIONS ────────────────────────────────────────────────────────────────
@@ -1699,6 +1730,8 @@ function renderSummary(){
 
 // ─── SAVE / RESTORE ───────────────────────────────────────────────────────────
 const SAVE_KEY = 'hawk_state_v1';
+const BACKUP_KEY = 'hawk_backups_v1';
+const MAX_BACKUPS = 5;
 
 function saveState(){
   try { S._savedAt=Date.now(); localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch(e){}
@@ -1719,6 +1752,65 @@ function clearSave(){
   try { localStorage.removeItem(SAVE_KEY); } catch(e){}
 }
 
+function backupCurrentRound(){
+  try {
+    const raw=localStorage.getItem(SAVE_KEY);
+    if(!raw) return;
+    const saved=JSON.parse(raw);
+    if(!saved||!saved.started) return;
+    const backups=getBackups();
+    backups.unshift(saved);
+    if(backups.length>MAX_BACKUPS) backups.length=MAX_BACKUPS;
+    localStorage.setItem(BACKUP_KEY, JSON.stringify(backups));
+  } catch(e){}
+}
+
+function getBackups(){
+  try { return JSON.parse(localStorage.getItem(BACKUP_KEY))||[]; } catch(e){ return []; }
+}
+
+function restoreBackup(index){
+  const backups=getBackups();
+  const b=backups[index];
+  if(!b) return;
+  Object.assign(S, b);
+  saveState();
+  renderPInputs(); renderSiGrid();
+  ['scorecard','nassau','summary'].forEach(t=>document.querySelector('[data-tab="'+t+'"]').disabled=false);
+  go('scorecard'); renderScorecard();
+}
+
+function showBackupsModal(){
+  const backups=getBackups();
+  const overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+  const modal=document.createElement('div');
+  modal.style.cssText='background:#fff;border-radius:12px;padding:18px;width:100%;max-width:380px;max-height:80vh;overflow-y:auto;';
+  modal.innerHTML='<p style="font-size:15px;font-weight:700;margin-bottom:12px;">Restore a previous round</p>';
+  if(!backups.length){
+    modal.innerHTML+='<p style="font-size:13px;color:var(--muted);">No backups saved yet.</p>';
+  } else {
+    backups.forEach((b,i)=>{
+      const dateStr=b._savedAt?new Date(b._savedAt).toLocaleString():'Unknown date';
+      const players=b.players?b.players.map(p=>p.name||'?').filter(n=>n&&n!=='?').join(', '):'';
+      const row=document.createElement('div');
+      row.style.cssText='border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;cursor:pointer;';
+      row.innerHTML='<p style="font-size:13px;font-weight:600;margin-bottom:2px;">'+dateStr+'</p>'
+        +'<p style="font-size:12px;color:var(--muted);">'+players+'</p>';
+      row.onclick=()=>{ overlay.remove(); restoreBackup(i); };
+      modal.appendChild(row);
+    });
+  }
+  const closeBtn=document.createElement('button');
+  closeBtn.textContent='Cancel';
+  closeBtn.style.cssText='width:100%;margin-top:8px;';
+  closeBtn.onclick=()=>overlay.remove();
+  modal.appendChild(closeBtn);
+  overlay.appendChild(modal);
+  overlay.onclick=e=>{ if(e.target===overlay) overlay.remove(); };
+  document.body.appendChild(overlay);
+}
+
 // Patch all state-mutating spots to auto-save
 // We wrap the key render functions that follow user input
 const _origRenderScorecard = renderScorecard;
@@ -1731,16 +1823,18 @@ function autosave(){ saveState(); }
   if(loadState()){
     // Re-render inputs with loaded player data
     renderPInputs(); renderSiGrid();
+    // Sync $ per unit input with saved value
+    if(S.posVal) document.getElementById('pos-val').value=S.posVal;
     // Unlock tabs — no rotations tab in Hawk
     ['scorecard','nassau','summary'].forEach(t=>document.querySelector('[data-tab="'+t+'"]').disabled=false);
     // Show resume banner
     const banner=document.createElement('div');
-    banner.style.cssText='background:var(--gold-bg);border:1px solid var(--gold);border-radius:8px;padding:11px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;';
-    const msg=document.createElement('span');
-    msg.style.cssText='font-size:13px;color:var(--gold);font-weight:600;';
+    banner.style.cssText='background:var(--gold-bg);border:1px solid var(--gold);border-radius:8px;padding:11px 14px;margin-bottom:12px;';
+    const msg=document.createElement('p');
+    msg.style.cssText='font-size:13px;color:var(--gold);font-weight:600;margin-bottom:8px;';
     const dateStr=S._savedAt?new Date(S._savedAt).toLocaleString():'';
-    msg.textContent='⏱ Round in progress'+(dateStr?' · saved '+dateStr:'')+'. Resume or start new?';
-    const btnRow=document.createElement('div'); btnRow.style.cssText='display:flex;gap:7px;flex-shrink:0;';
+    msg.textContent='⏱ Round in progress'+(dateStr?' · saved '+dateStr:'');
+    const btnRow=document.createElement('div'); btnRow.style.cssText='display:flex;gap:7px;flex-wrap:wrap;';
     const resumeBtn=document.createElement('button');
     resumeBtn.textContent='Resume'; resumeBtn.style.cssText='font-size:12px;padding:5px 11px;background:var(--gold-bg);color:var(--gold);border-color:var(--gold);font-weight:600;';
     resumeBtn.onclick=()=>{
@@ -1750,21 +1844,59 @@ function autosave(){ saveState(); }
     const newBtn=document.createElement('button');
     newBtn.textContent='New round'; newBtn.style.cssText='font-size:12px;padding:5px 11px;';
     newBtn.onclick=()=>{
-      clearSave();
-      Object.assign(S,{
-        players:[{name:'',hcp:0},{name:'',hcp:0},{name:'',hcp:0},{name:'',hcp:0}],
-        si:SI.slice(),par:PAR.slice(),holes:18,started:false,
-        matchVal:0,posVal:0.25,nassauVal:5,nassau:{},hawkStart:1,hawkIdx:null,
-        rotations:[],scores:{},hawkData:{},curHole:1,
-      });
-      ['scorecard','nassau','summary'].forEach(t=>document.querySelector('[data-tab="'+t+'"]').disabled=true);
-      document.querySelector('[data-tab="setup"]').disabled=false;
-      go('setup'); renderPInputs(); renderSiGrid();
-      banner.remove();
+      // Confirmation dialog
+      const conf=document.createElement('div');
+      conf.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+      const box=document.createElement('div');
+      box.style.cssText='background:#fff;border-radius:12px;padding:20px;width:100%;max-width:320px;';
+      box.innerHTML='<p style="font-size:15px;font-weight:700;margin-bottom:6px;">Start a new round?</p>'
+        +'<p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Your current round will be backed up and can be restored if needed.</p>';
+      const confBtns=document.createElement('div'); confBtns.style.cssText='display:flex;gap:8px;';
+      const cancelBtn=document.createElement('button');
+      cancelBtn.textContent='Cancel'; cancelBtn.style.cssText='flex:1;';
+      cancelBtn.onclick=()=>conf.remove();
+      const confirmBtn=document.createElement('button');
+      confirmBtn.textContent='Start new round'; confirmBtn.style.cssText='flex:1;background:var(--red);color:#fff;border-color:var(--red);font-weight:600;';
+      confirmBtn.onclick=()=>{
+        conf.remove();
+        backupCurrentRound();
+        clearSave();
+        Object.assign(S,{
+          players:[{name:'',hcp:0},{name:'',hcp:0},{name:'',hcp:0},{name:'',hcp:0}],
+          si:SI.slice(),par:PAR.slice(),holes:18,started:false,
+          matchVal:0,posVal:0.25,nassauVal:5,nassau:{},hawkStart:1,hawkIdx:null,
+          rotations:[],scores:{},hawkData:{},curHole:1,
+        });
+        ['scorecard','nassau','summary'].forEach(t=>document.querySelector('[data-tab="'+t+'"]').disabled=true);
+        document.querySelector('[data-tab="setup"]').disabled=false;
+        go('setup'); renderPInputs(); renderSiGrid();
+        banner.remove();
+      };
+      confBtns.appendChild(cancelBtn); confBtns.appendChild(confirmBtn);
+      box.appendChild(confBtns);
+      conf.appendChild(box);
+      conf.onclick=e=>{ if(e.target===conf) conf.remove(); };
+      document.body.appendChild(conf);
     };
-    btnRow.appendChild(resumeBtn); btnRow.appendChild(newBtn);
+    const restoreBtn=document.createElement('button');
+    restoreBtn.textContent='Restore old round'; restoreBtn.style.cssText='font-size:12px;padding:5px 11px;';
+    restoreBtn.onclick=()=>showBackupsModal();
+    btnRow.appendChild(resumeBtn); btnRow.appendChild(newBtn); btnRow.appendChild(restoreBtn);
     banner.appendChild(msg); banner.appendChild(btnRow);
     document.querySelector('.wrap').insertBefore(banner, document.querySelector('.tabs').nextSibling);
+  } else {
+    // No active round — still show restore option if backups exist
+    const backups=getBackups();
+    if(backups.length){
+      const restoreBanner=document.createElement('div');
+      restoreBanner.style.cssText='background:#f5f3ee;border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;';
+      restoreBanner.innerHTML='<span style="font-size:13px;color:var(--muted);">No active round.</span>';
+      const rb=document.createElement('button');
+      rb.textContent='Restore previous round'; rb.style.cssText='font-size:12px;padding:5px 11px;';
+      rb.onclick=()=>showBackupsModal();
+      restoreBanner.appendChild(rb);
+      document.querySelector('.wrap').insertBefore(restoreBanner, document.querySelector('.tabs').nextSibling);
+    }
   }
 })();
 
@@ -2160,20 +2292,15 @@ function renderNassauInto(container){
 
         row.appendChild(betLbl); row.appendChild(statusSpan); row.appendChild(resultSpan);
 
-        // Press button — show if either player is 2 down and section not over
-        // and we're past the start hole and there are holes remaining
+        // Press button — show whenever section has started and holes remain
         if(!over && rem>0 && scored>0){
-          const canPressA=lead<=-2; // pA is 2 down
-          const canPressB=lead>=2;  // pB is 2 down
-          if(canPressA||canPressB){
-            // Find the current hole (last scored hole in section)
-            let lastScored=bStart;
-            for(let h=bEnd;h>=bStart;h--){
-              const nA=nassauNet(pA,h,pA,pB), nB=nassauNet(pB,h,pA,pB);
-              if(nA&&nB){lastScored=h;break;}
-            }
-            const nextHole=lastScored+1;
-            if(nextHole<=bEnd){
+          let lastScored=bStart;
+          for(let h=bEnd;h>=bStart;h--){
+            const nA=nassauNet(pA,h,pA,pB), nB=nassauNet(pB,h,pA,pB);
+            if(nA&&nB){lastScored=h;break;}
+          }
+          const nextHole=lastScored+1;
+          if(nextHole<=bEnd){
               const pressBtn=document.createElement('button');
               pressBtn.textContent='Press';
               pressBtn.className='btn-sm';
@@ -2186,7 +2313,6 @@ function renderNassauInto(container){
               row.appendChild(pressBtn);
             }
           }
-        }
 
         // Remove press button (for press rows)
         if(bi>0){
