@@ -790,6 +790,12 @@ function renderNassauSetup(){
 }
 
 document.getElementById('start-btn').onclick=()=>{
+  // Protect an in-progress round: confirm, then back it up before it is replaced
+  const hasScores=S.started&&S.scores&&Object.keys(S.scores).some(h=>S.scores[h]&&Object.keys(S.scores[h]).length);
+  if(hasScores){
+    if(!confirm('A round is already in progress. Start a new round? The current round will be backed up and can be restored.')) return;
+    backupCurrentRound();
+  }
   S.holes=+document.getElementById('hole-count').value;
   S.matchVal=0;
   S.posVal=+document.getElementById('pos-val').value||0.50;
@@ -2249,7 +2255,7 @@ function renderNassauInto(container){
       // Build list of all bets to show: [{betLabel, start, end}]
       const allBets=[{betLabel:label, start, end}];
       pressList.forEach((p,pi)=>{
-        allBets.push({betLabel:'Press '+(pi+1), start:p.fromHole, end});
+        allBets.push({betLabel:'Press '+(pi+1)+' (H'+p.fromHole+')', start:p.fromHole, end});
       });
 
       allBets.forEach(({betLabel,start:bStart,end:bEnd},bi)=>{
@@ -2276,7 +2282,7 @@ function renderNassauInto(container){
         }
 
         const row=document.createElement('div');
-        row.style.cssText='display:flex;align-items:center;gap:6px;padding:6px 8px;'+(bi>0?'border-top:1px solid var(--border);background:#f9f8f5;':'');
+        row.style.cssText='display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:6px 8px;'+(bi>0?'border-top:1px solid var(--border);background:#f9f8f5;':'');
 
         const betLbl=document.createElement('span');
         betLbl.style.cssText='font-size:12px;font-weight:700;min-width:56px;';
@@ -2292,27 +2298,35 @@ function renderNassauInto(container){
 
         row.appendChild(betLbl); row.appendChild(statusSpan); row.appendChild(resultSpan);
 
-        // Press button — show whenever section has started and holes remain
-        if(!over && rem>0 && scored>0){
+        // Press controls — choose a starting hole (defaults to next unscored hole; earlier holes = retroactive)
+        if(rem>0 && scored>0 && bEnd>bStart){
           let lastScored=bStart;
           for(let h=bEnd;h>=bStart;h--){
             const nA=nassauNet(pA,h,pA,pB), nB=nassauNet(pB,h,pA,pB);
             if(nA&&nB){lastScored=h;break;}
           }
-          const nextHole=lastScored+1;
-          if(nextHole<=bEnd){
-              const pressBtn=document.createElement('button');
-              pressBtn.textContent='Press';
-              pressBtn.className='btn-sm';
-              pressBtn.style.cssText='font-size:11px;padding:3px 8px;background:var(--gold-bg);color:var(--gold);border-color:var(--gold);font-weight:700;';
-              pressBtn.onclick=()=>{
-                if(!cfg.presses[label]) cfg.presses[label]=[];
-                cfg.presses[label].push({fromHole:nextHole});
-                autosave(); renderAllNassau();
-              };
-              row.appendChild(pressBtn);
-            }
+          const defHole=Math.min(lastScored+1,bEnd);
+          const fromSel=document.createElement('select');
+          fromSel.style.cssText='width:auto;font-size:11px;padding:2px 3px;';
+          fromSel.title='Press starts at this hole';
+          for(let h=bStart+1;h<=bEnd;h++){
+            const o=document.createElement('option');
+            o.value=h; o.textContent='H'+h;
+            if(h===defHole) o.selected=true;
+            fromSel.appendChild(o);
           }
+          const pressBtn=document.createElement('button');
+          pressBtn.textContent='Press from';
+          pressBtn.className='btn-sm';
+          pressBtn.style.cssText='font-size:11px;padding:3px 8px;background:var(--gold-bg);color:var(--gold);border-color:var(--gold);font-weight:700;';
+          pressBtn.onclick=()=>{
+            if(!cfg.presses[label]) cfg.presses[label]=[];
+            cfg.presses[label].push({fromHole:+fromSel.value});
+            autosave(); renderAllNassau();
+          };
+          row.appendChild(pressBtn);
+          row.appendChild(fromSel);
+        }
 
         // Remove press button (for press rows)
         if(bi>0){
